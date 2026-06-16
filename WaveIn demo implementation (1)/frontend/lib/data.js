@@ -1,11 +1,18 @@
-// All values hardcoded / simulated for the demo. No external data sources.
+// Event catalogue. Wave tables (fan counts, transport, zones) are the source of
+// truth; the CO₂ + MARTA-shift counters are DERIVED from them via lib/logistics
+// using real zone→stadium driving distances — see deriveCounters below.
+
+import { deriveCounters } from "./logistics";
 
 // ─── Shared wave-table dot colors ────────────────────────────────────────────
 const W1 = "#00ff87", W2 = "#ffd23f", W3 = "#ff9500", W4 = "#ff4444";
 
 // ─── Event catalogue ─────────────────────────────────────────────────────────
-// Each entry drives the entire Organizer view when selected.
-export const EVENTS = [
+// Each entry drives the entire Organizer view when selected. The `counters`
+// fields below are placeholders — they're recomputed from each event's wave
+// table just after this array (see the EVENTS map), so the numbers shown always
+// trace back to fan counts × transport mode × real zone distances.
+const EVENTS_RAW = [
   // ── WC26 ──────────────────────────────────────────────────────────────────
   {
     id: "wc26-esp-cpv", category: "WC26", emoji: "⚽",
@@ -205,6 +212,14 @@ export const EVENTS = [
     },
   },
 ];
+
+// Recompute every event's counters from its own wave table so the displayed
+// CO₂ + MARTA numbers are derived, not hand-set. The inline `counters` above are
+// discarded here.
+export const EVENTS = EVENTS_RAW.map((e) => ({
+  ...e,
+  counters: deriveCounters(e.waveTable),
+}));
 
 // ─── Defaults (used by FanView and as the organizer's initial selection) ─────
 export const EVENT = EVENTS[0];

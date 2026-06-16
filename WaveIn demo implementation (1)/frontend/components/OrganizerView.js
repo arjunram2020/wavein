@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useCountUp, fmt } from "@/lib/useCountUp";
 import { generateChart } from "@/lib/waveLogic";
+import { deriveCounters } from "@/lib/logistics";
 import ArrivalChart from "./ArrivalChart";
 
 const card = {
@@ -30,6 +31,22 @@ function StatCard({ label, icon, value, sub, valueColor, glow }) {
         {value}
       </div>
       <div style={{ fontSize: 12, color: "#8888aa", marginTop: 8 }}>{sub}</div>
+    </div>
+  );
+}
+
+// Small mono "ƒ(x)" chip that shows how a metric is computed, under its value.
+function Formula({ color, children }) {
+  return (
+    <div style={{
+      marginTop: 8, padding: "6px 9px", borderRadius: 6,
+      background: "rgba(255,255,255,0.03)", border: "1px solid #1e1e2e",
+      display: "flex", gap: 7, alignItems: "flex-start",
+    }}>
+      <span style={{ color, fontWeight: 700, fontStyle: "italic", fontSize: 12, lineHeight: 1.5, flex: "none" }}>ƒ</span>
+      <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 10.5, lineHeight: 1.5, color: "#9a9ab0" }}>
+        {children}
+      </span>
     </div>
   );
 }
@@ -127,12 +144,10 @@ function CreateEventPanel({ onSave, onClose }) {
       date: details.date,
       kickoff: details.kickoff,
       totalFans: fans.toLocaleString(),
-      counters: {
-        co2Target: Math.round(fans * 0.69),
-        martaTarget: Math.round(fans * 0.027),
-        co2Ceiling: Math.round(fans * 0.91),
-        martaCeiling: Math.round(fans * 0.037),
-      },
+      // Counters are derived from the wave table itself — per-wave fan counts,
+      // transport modes, and real zone→stadium distances — not from attendance
+      // multipliers. See lib/logistics.js.
+      counters: deriveCounters(waves),
       waveTable: waves,
       chart: generateChart(details.kickoff, fans),
     });
@@ -380,6 +395,9 @@ export default function OrganizerView({ events, onCreateEvent }) {
           <div style={{ height: 7, borderRadius: 4, background: "#1e1e2e", overflow: "hidden" }}>
             <div style={{ height: "100%", background: "#00ff87", boxShadow: "0 0 10px rgba(0,255,135,0.6)", transition: "width 0.6s ease", width: co2Pct }} />
           </div>
+          <Formula color="#00ff87">
+            Σ (MARTA-wave fans × round-trip × zone distance km × 0.21 kg/km ÷ 2.0 per car)
+          </Formula>
 
           <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#8888aa", textTransform: "uppercase", marginTop: 18 }}>Car → MARTA Shifts</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: "#00c4ff", textShadow: "0 0 10px rgba(0,196,255,0.5)", margin: "2px 0 8px" }}>
@@ -388,6 +406,9 @@ export default function OrganizerView({ events, onCreateEvent }) {
           <div style={{ height: 5, borderRadius: 4, background: "#1e1e2e", overflow: "hidden" }}>
             <div style={{ height: "100%", background: "#00c4ff", boxShadow: "0 0 8px rgba(0,196,255,0.5)", transition: "width 0.6s ease", width: martaPct }} />
           </div>
+          <Formula color="#00c4ff">
+            Σ fans in MARTA-mode waves &nbsp;·&nbsp; vs. ceiling = all fans within MARTA rail range (≤ 23 km)
+          </Formula>
 
           <div style={{ borderTop: "1px dashed #1e1e2e", margin: "20px 0" }} />
 
@@ -405,7 +426,9 @@ export default function OrganizerView({ events, onCreateEvent }) {
 
           <div style={{ borderTop: "1px dashed #1e1e2e", margin: "18px 0 12px" }} />
           <div style={{ fontSize: 11, lineHeight: 1.6, color: "#5a5a72" }}>
-            Methodology: EPA idle emissions data. 0.8 gal/hr idle burn · 8.887 kg CO₂/gal. 22 min avg idle → 4 min with WaveIn.
+            Methodology: counters derived from each wave&apos;s fan count, transport mode, and real
+            driving distance to Mercedes-Benz Stadium (Google Maps). Emissions: EPA avg car 0.21 kg CO₂/km ·
+            round trip · 2.0 occupancy.
           </div>
         </div>
       </div>

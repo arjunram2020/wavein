@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes wiBlink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  @keyframes wiWipe { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+  @keyframes wiPop { 0%{transform:scale(0.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  @keyframes wiSlideUp { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes wiPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,135,0.55),0 0 24px rgba(0,255,135,0.35)} 50%{box-shadow:0 0 0 10px rgba(0,255,135,0),0 0 34px rgba(0,255,135,0.55)} }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0a0a0f;color:#fff;font-family:'Space Grotesk','Inter',system-ui,sans-serif;letter-spacing:-0.01em;">
+
+  <!-- NAV -->
+  <div style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:64px;background:#0d0d14;border-bottom:1px solid #1e1e2e;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:#00ff87;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 16px rgba(0,255,135,0.5);">⚡</div>
+      <span style="font-size:21px;font-weight:700;color:#fff;">WaveIn</span>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onClick="{{ setOrganizer }}" style="{{ orgPillStyle }}">Organizer View</button>
+      <button onClick="{{ setFan }}" style="{{ fanPillStyle }}">Fan View</button>
+    </div>
+  </div>
+
+  <!-- ============ ORGANIZER ============ -->
+  <sc-if value="{{ isOrganizer }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Organizer" style="max-width:1320px;margin:0 auto;padding:28px 28px 56px;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <h1 style="margin:0;font-size:34px;font-weight:700;">Event Command Center</h1>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid #1e1e2e;border-radius:999px;background:#111118;">
+        <span style="width:9px;height:9px;border-radius:50%;background:#00ff87;box-shadow:0 0 10px rgba(0,255,135,0.8);animation:wiBlink 1.6s ease-in-out infinite;"></span>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.14em;color:#00ff87;">LIVE</span>
+      </div>
+    </div>
+
+    <!-- ROW 1 stat cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;">
+
+      <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.05);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.13em;color:#8888aa;">TOTAL FANS</span>
+          <span style="font-size:20px;">👥</span>
+        </div>
+        <div style="font-size:38px;font-weight:700;margin-top:10px;line-height:1;">68,400</div>
+        <div style="font-size:12px;color:#8888aa;margin-top:8px;">Spain vs Cape Verde · June 15</div>
+      </div>
+
+      <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.05);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.13em;color:#8888aa;">ACTIVE WAVES</span>
+          <span style="font-size:20px;">🌊</span>
+        </div>
+        <div style="font-size:38px;font-weight:700;margin-top:10px;line-height:1;">4</div>
+        <div style="font-size:12px;color:#8888aa;margin-top:8px;">Waves 1–4 operational</div>
+      </div>
+
+      <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.05);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.13em;color:#8888aa;">CO₂ SAVED</span>
+          <span style="font-size:20px;">🌱</span>
+        </div>
+        <div style="font-size:38px;font-weight:700;margin-top:10px;line-height:1;color:#00ff87;text-shadow:0 0 12px rgba(0,255,135,0.6);">{{ co2Display }}</div>
+        <div style="font-size:12px;color:#8888aa;margin-top:8px;">kg this game</div>
+      </div>
+
+      <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.05);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.13em;color:#8888aa;">CAR → MARTA SHIFTS</span>
+          <span style="font-size:20px;">🚇</span>
+        </div>
+        <div style="font-size:38px;font-weight:700;margin-top:10px;line-height:1;color:#00c4ff;text-shadow:0 0 12px rgba(0,196,255,0.5);">{{ martaDisplay }}</div>
+        <div style="font-size:12px;color:#8888aa;margin-top:8px;">fans rerouted to transit</div>
+      </div>
+    </div>
+
+    <!-- ROW 2 chart -->
+    <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:22px 22px 14px;box-shadow:0 0 20px rgba(0,255,135,0.05);margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+        <h2 style="margin:0;font-size:17px;font-weight:600;">Arrival Distribution — Spain vs Cape Verde, June 15 · 7:00pm KO</h2>
+        <div style="display:flex;gap:18px;">
+          <span style="display:flex;align-items:center;gap:7px;font-size:12px;color:#8888aa;"><span style="width:14px;height:3px;border-radius:2px;background:#ff4444;display:inline-block;"></span>Without WaveIn</span>
+          <span style="display:flex;align-items:center;gap:7px;font-size:12px;color:#8888aa;"><span style="width:14px;height:3px;border-radius:2px;background:#00ff87;display:inline-block;"></span>With WaveIn</span>
+        </div>
+      </div>
+      <div style="width:100%;">{{ chart }}</div>
+    </div>
+
+    <!-- ROW 3 -->
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start;">
+
+      <!-- wave table -->
+      <div style="background:#111118;border:1px solid #1e1e2e;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.05);overflow:hidden;">
+        <h2 style="margin:0 0 14px;font-size:17px;font-weight:600;">Wave Assignments — Active</h2>
+        <div style="display:grid;grid-template-columns:1.1fr 1.2fr 1.5fr 1.4fr 1.7fr 0.8fr;gap:0;font-size:13px;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;">WAVE</div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;">WINDOW</div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;">ZONES</div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;">TRANSPORT</div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;">REWARD</div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;color:#8888aa;padding:0 8px 10px;text-align:right;">FANS</div>
+
+          <sc-for list="{{ waves }}" as="w" hint-placeholder-count="4">
+            <div style="{{ w.cellL }}"><span style="display:inline-flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:50%;flex:none;background:#333;{{ w.dot }}"></span><span style="font-weight:600;white-space:nowrap;">{{ w.name }}</span></span></div>
+            <div style="{{ w.cell }}">{{ w.window }}</div>
+            <div style="{{ w.cell }}">{{ w.zones }}</div>
+            <div style="{{ w.cell }}">{{ w.transport }}</div>
+            <div style="{{ w.cell }}">{{ w.reward }}</div>
+            <div style="{{ w.cellR }}">{{ w.fans }}</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- sustainability -->
+      <div style="background:#111118;border:1px solid #1e1e2e;border-left:4px solid #00ff87;border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,255,135,0.06);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;color:#00ff87;text-shadow:0 0 10px rgba(0,255,135,0.4);margin-bottom:18px;">🌱 SUSTAINABILITY IMPACT</div>
+
+        <div style="font-size:11px;letter-spacing:0.08em;color:#8888aa;text-transform:uppercase;">CO₂ Saved This Game</div>
+        <div style="font-size:30px;font-weight:700;color:#00ff87;text-shadow:0 0 12px rgba(0,255,135,0.6);margin:2px 0 8px;">{{ co2Display }} <span style="font-size:15px;color:#8888aa;text-shadow:none;font-weight:500;">kg</span></div>
+        <div style="height:7px;border-radius:4px;background:#1e1e2e;overflow:hidden;">
+          <div style="height:100%;background:#00ff87;box-shadow:0 0 10px rgba(0,255,135,0.6);transition:width 0.6s ease;width:{{ co2Pct }};"></div>
+        </div>
+
+        <div style="font-size:11px;letter-spacing:0.08em;color:#8888aa;text-transform:uppercase;margin-top:18px;">Car → MARTA Shifts</div>
+        <div style="font-size:24px;font-weight:700;color:#00c4ff;text-shadow:0 0 10px rgba(0,196,255,0.5);margin:2px 0 8px;">{{ martaDisplay }} <span style="font-size:13px;color:#8888aa;text-shadow:none;font-weight:500;">fans</span></div>
+        <div style="height:5px;border-radius:4px;background:#1e1e2e;overflow:hidden;">
+          <div style="height:100%;background:#00c4ff;box-shadow:0 0 8px rgba(0,196,255,0.5);transition:width 0.6s ease;width:{{ martaPct }};"></div>
+        </div>
+
+        <div style="border-top:1px dashed #1e1e2e;margin:20px 0;"></div>
+
+        <div style="font-size:11px;letter-spacing:0.08em;color:#8888aa;text-transform:uppercase;">Projected: 8 WC26 Games</div>
+        <div style="font-size:20px;font-weight:700;margin:3px 0 14px;">408,000 kg <span style="font-size:13px;color:#8888aa;font-weight:500;">CO₂ eliminated</span></div>
+
+        <div style="font-size:12px;color:#8888aa;margin-bottom:8px;">Equivalent to:</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="font-size:17px;">🌳</span><span><strong style="color:#fff;">2,190</strong> trees planted</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="font-size:17px;">🚗</span><span><strong style="color:#fff;">89</strong> cars removed for a year</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="font-size:17px;">✈️</span><span><strong style="color:#fff;">51</strong> transatlantic flights offset</span></div>
+        </div>
+
+        <div style="border-top:1px dashed #1e1e2e;margin:18px 0 12px;"></div>
+        <div style="font-size:11px;line-height:1.6;color:#5a5a72;">Methodology: EPA idle emissions data. 0.8 gal/hr idle burn · 8.887 kg CO₂/gal. 22 min avg idle → 4 min with WaveIn.</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ FAN ============ -->
+  <sc-if value="{{ isFan }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Fan" style="min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:40px 20px;">
+    <div style="width:100%;max-width:480px;background:#111118;border:1px solid #1e2e24;border-radius:16px;padding:30px;box-shadow:0 0 40px rgba(0,255,135,0.08);">
+
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(0,255,135,0.12);border:1px solid rgba(0,255,135,0.3);color:#00ff87;font-size:11px;font-weight:600;letter-spacing:0.1em;margin-bottom:16px;">⚽ WC26 ATLANTA</div>
+      <h1 style="margin:0;font-size:32px;font-weight:700;">Find Your Wave</h1>
+      <div style="font-size:13px;color:#8888aa;margin-top:6px;">Spain vs Cape Verde · June 15 · 7:00pm KO</div>
+
+      <!-- dropdown 1 -->
+      <div style="margin-top:26px;position:relative;">
+        <label style="font-size:13px;font-weight:600;color:#c9c9d8;">Where are you coming from?</label>
+        <div onClick="{{ toggleOrigin }}" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:#0d0d14;border:1px solid {{ originBorder }};border-radius:10px;cursor:pointer;font-size:14px;color:{{ originColor }};transition:border-color 0.15s;">
+          <span>{{ originLabel }}</span>
+          <span style="color:#8888aa;font-size:11px;">▼</span>
+        </div>
+        <sc-if value="{{ originOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:20;background:#0d0d14;border:1px solid #1e2e24;border-radius:10px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.6);">
+            <sc-for list="{{ origins }}" as="o" hint-placeholder-count="7">
+              <div onClick="{{ o.onSelect }}" style="padding:11px 15px;font-size:14px;cursor:pointer;color:#e6e6f0;border-bottom:1px solid #15151f;" style-hover="background:rgba(0,255,135,0.08);color:#00ff87;">{{ o.label }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- dropdown 2 -->
+      <div style="margin-top:18px;position:relative;">
+        <label style="font-size:13px;font-weight:600;color:#c9c9d8;">How are you getting here?</label>
+        <div onClick="{{ toggleTransport }}" style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:#0d0d14;border:1px solid {{ transportBorder }};border-radius:10px;cursor:pointer;font-size:14px;color:{{ transportColor }};transition:border-color 0.15s;">
+          <span>{{ transportLabel }}</span>
+          <span style="color:#8888aa;font-size:11px;">▼</span>
+        </div>
+        <sc-if value="{{ transportOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:6px;z-index:20;background:#0d0d14;border:1px solid #1e2e24;border-radius:10px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.6);">
+            <sc-for list="{{ transports }}" as="t" hint-placeholder-count="3">
+              <div onClick="{{ t.onSelect }}" style="padding:11px 15px;font-size:14px;cursor:pointer;color:#e6e6f0;border-bottom:1px solid #15151f;" style-hover="background:rgba(0,255,135,0.08);color:#00ff87;">{{ t.label }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- CTA / result -->
+      <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ submit }}" style="margin-top:26px;width:100%;padding:15px;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;transition:transform 0.15s,box-shadow 0.15s;background:{{ ctaBg }};color:{{ ctaColor }};cursor:{{ ctaCursor }};box-shadow:{{ ctaShadow }};" style-hover="transform:scale(1.02);box-shadow:0 0 28px rgba(0,255,135,0.6);">Get My Wave →</button>
+      </sc-if>
+
+      <sc-if value="{{ showResult }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px;border-top:1px solid #1e1e2e;padding-top:24px;animation:wiSlideUp 0.45s ease;">
+          <div style="text-align:center;">
+            <div style="display:inline-block;padding:14px 26px;border-radius:12px;font-size:24px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border:2px solid {{ result.color }};color:{{ result.color }};background:{{ result.badgeBg }};box-shadow:{{ result.badgeShadow }};text-shadow:{{ result.badgeTextShadow }};animation:{{ result.badgeAnim }};">{{ result.title }}</div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;gap:12px;font-size:15px;"><span style="font-size:20px;">🕔</span><span>Arrive <strong>{{ result.window }}</strong></span></div>
+
+            <sc-if value="{{ result.transitBonus }}" hint-placeholder-val="{{ false }}">
+              <div style="display:inline-flex;align-self:flex-start;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgba(0,255,135,0.12);border:1px solid rgba(0,255,135,0.35);color:#00ff87;font-size:13px;font-weight:600;">🌱 Transit Bonus Applied</div>
+            </sc-if>
+
+            <div style="display:flex;align-items:flex-start;gap:12px;font-size:15px;"><span style="font-size:20px;">🎁</span><span><span style="color:#8888aa;">Your Reward:</span><br><strong>{{ result.reward }}</strong></span></div>
+          </div>
+
+          <a href="{{ mapsUrl }}" target="_blank" rel="noopener" style="margin-top:20px;display:block;text-align:center;text-decoration:none;width:100%;padding:15px;background:#00ff87;color:#000;font-weight:700;font-size:15px;border-radius:10px;box-shadow:0 0 22px rgba(0,255,135,0.45);">Get Directions →</a>
+
+          <div onClick="{{ reset }}" style="margin-top:14px;text-align:center;font-size:13px;color:#8888aa;cursor:pointer;" style-hover="color:#fff;">← Try different options</div>
+
+          <div style="margin-top:18px;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">💡 Arriving during your wave earns maximum rewards and guarantees express entry.</div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'organizer',
+    co2: 0,
+    marta: 0,
+    origin: null,
+    transport: null,
+    originOpen: false,
+    transportOpen: false,
+    showResult: false,
+    result: null,
+  };
+
+  componentDidMount() {
+    this._timers = [];
+    this.animate('co2', 47200, 20000, () => this.drift('co2', 2, 8, 2000, 3000));
+    this.animate('marta', 1847, 25000, () => this.drift('marta', 1, 1, 4000, 6000));
+  }
+  componentWillUnmount() {
+    (this._timers || []).forEach(t => clearTimeout(t));
+    if (this._raf) cancelAnimationFrame(this._raf);
+  }
+
+  animate(key, target, dur, done) {
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      this.setState({ [key]: Math.round(target * eased) });
+      if (p < 1) { this._raf = requestAnimationFrame(tick); }
+      else if (done) done();
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
+
+  drift(key, lo, hi, minMs, maxMs) {
+    const step = () => {
+      const inc = lo + Math.floor(Math.random() * (hi - lo + 1));
+      this.setState(s => ({ [key]: s[key] + inc }));
+      const t = setTimeout(step, minMs + Math.random() * (maxMs - minMs));
+      this._timers.push(t);
+    };
+    const t = setTimeout(step, minMs + Math.random() * (maxMs - minMs));
+    this._timers.push(t);
+  }
+
+  fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+
+  pill(active) {
+    return active
+      ? 'padding:8px 18px;border-radius:999px;border:1px solid #00ff87;background:#00ff87;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 0 16px rgba(0,255,135,0.4);'
+      : 'padding:8px 18px;border-radius:999px;border:1px solid #1e1e2e;background:transparent;color:#fff;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;';
+  }
+
+  // ---- wave logic ----
+  computeWave(origin, transport) {
+    const W = {
+      1: { color: '#00ff87' }, 2: { color: '#ffd23f' }, 3: { color: '#ff9500' }, 4: { color: '#ff4444' },
+    };
+    let wave, title, win, reward, transitBonus = false, priority = false;
+    if (transport === 'marta') {
+      transitBonus = true;
+      if (origin === 'airport' || origin === 'downtown') {
+        wave = 1; priority = true; title = 'WAVE 1 — PRIORITY'; win = '4:30 – 5:15pm';
+        reward = 'Free drink + Priority Gate Entry + 🌱 Transit Bonus';
+      } else if (origin === 'midtown') {
+        wave = 1; title = 'WAVE 1'; win = '5:00 – 5:30pm';
+        reward = '$10 concession credit + 🌱 Transit Bonus';
+      } else {
+        wave = 2; title = 'WAVE 2'; win = '5:15 – 5:45pm';
+        reward = '$10 concession credit + 🌱 Transit Bonus';
+      }
+    } else if (transport === 'rideshare') {
+      wave = 3; title = 'WAVE 3'; win = '5:45 – 6:15pm'; reward = '$5 concession credit';
+    } else { // driving
+      if (origin === 'suburbs') {
+        wave = 4; title = 'WAVE 4'; win = '6:00 – 6:45pm'; reward = 'Standard entry';
+      } else if (origin === 'downtown' || origin === 'midtown') {
+        wave = 2; title = 'WAVE 2'; win = '5:15 – 5:45pm'; reward = 'Standard entry';
+      } else {
+        wave = 3; title = 'WAVE 3'; win = '5:45 – 6:15pm'; reward = '$5 concession credit';
+      }
+    }
+    const c = W[wave].color;
+    return {
+      title, window: win, reward, transitBonus, priority, color: c,
+      badgeBg: `${c}1a`,
+      badgeShadow: `0 0 24px ${c}55`,
+      badgeTextShadow: `0 0 14px ${c}99`,
+      badgeAnim: priority ? 'wiPulse 2s ease-in-out infinite' : 'none',
+    };
+  }
+
+  // ---- SVG chart ----
+  buildChart() {
+    const times = ['4:00','4:15','4:30','4:45','5:00','5:15','5:30','5:45','6:00','6:15','6:30','6:45','7:00','7:15'];
+    const red   = [400,400,420,450,500,650,900,2200,4800,7200,7100,4200,1500,600];
+    const green = [300,900,1900,2300,2600,2700,2800,2700,2600,2500,2400,2000,1100,500];
+    const W = 1000, H = 340, L = 58, R = 982, T = 18, B = 286;
+    const ymax = 8000;
+    const X = i => L + i * (R - L) / (times.length - 1);
+    const Y = v => B - (v / ymax) * (B - T);
+    const pts = arr => arr.map((v, i) => ({ x: X(i), y: Y(v) }));
+    const smooth = (p) => {
+      let d = `M ${p[0].x} ${p[0].y}`;
+      for (let i = 0; i < p.length - 1; i++) {
+        const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2;
+        const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+        const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+      }
+      return d;
+    };
+    const rp = pts(red), gp = pts(green);
+    const area = (p) => smooth(p) + ` L ${p[p.length-1].x} ${B} L ${p[0].x} ${B} Z`;
+    const h = React.createElement;
+    const els = [];
+    // gridlines + y labels
+    [0,2000,4000,6000,8000].forEach((gv,i) => {
+      const gy = Y(gv);
+      els.push(h('line',{key:'g'+i,x1:L,x2:R,y1:gy,y2:gy,stroke:'#1e1e2e',strokeWidth:1}));
+      els.push(h('text',{key:'gl'+i,x:L-10,y:gy+4,textAnchor:'end',fontSize:11,fill:'#5a5a72',fontFamily:'Space Grotesk'},gv.toLocaleString()));
+    });
+    els.push(h('text',{key:'yt',x:14,y:(T+B)/2,fontSize:11,fill:'#8888aa',textAnchor:'middle',transform:`rotate(-90 14 ${(T+B)/2})`,fontFamily:'Space Grotesk'},'Fans / 15 min'));
+    // x labels
+    times.forEach((t,i) => els.push(h('text',{key:'x'+i,x:X(i),y:B+20,textAnchor:'middle',fontSize:10.5,fill:'#5a5a72',fontFamily:'Space Grotesk'},t)));
+    // clip wipe
+    els.push(h('defs',{key:'defs'},
+      h('clipPath',{id:'wiWipeClip'}, h('rect',{x:0,y:0,width:W,height:H,style:{transformBox:'fill-box',transformOrigin:'left',animation:'wiWipe 1.6s ease-out forwards'}}))
+    ));
+    const curves = h('g',{key:'curves',clipPath:'url(#wiWipeClip)'},
+      h('path',{d:area(rp),fill:'rgba(255,68,68,0.20)'}),
+      h('path',{d:smooth(rp),fill:'none',stroke:'#ff4444',strokeWidth:2.5}),
+      h('path',{d:area(gp),fill:'rgba(0,255,135,0.15)'}),
+      h('path',{d:smooth(gp),fill:'none',stroke:'#00ff87',strokeWidth:2.5})
+    );
+    els.push(curves);
+    // kickoff line at 7:00pm (index 12)
+    const kx = X(12);
+    els.push(h('line',{key:'ko',x1:kx,x2:kx,y1:T,y2:B,stroke:'#ffffff',strokeWidth:1.5,strokeDasharray:'5 5',opacity:0.6}));
+    els.push(h('rect',{key:'kob',x:kx-44,y:T-2,width:88,height:20,rx:5,fill:'#1a1a26',stroke:'#2a2a3a'}));
+    els.push(h('text',{key:'kot',x:kx,y:T+12,textAnchor:'middle',fontSize:11,fill:'#fff',fontWeight:600,fontFamily:'Space Grotesk'},'Kickoff ⚽'));
+    return h('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%',height:'auto',style:{display:'block',maxHeight:'360px'}},els);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const isOrg = s.view === 'organizer';
+
+    const originList = [
+      ['airport','✈️ ATL Airport'],['downtown','🏙️ Downtown Atlanta'],['midtown','🏘️ Midtown'],
+      ['buckhead','🏡 Buckhead'],['decatur','🚉 Decatur'],['sandysprings','🌆 Sandy Springs'],
+      ['suburbs','🚗 Suburbs (30+ min away)'],
+    ].map(([id,label]) => ({ id, label, onSelect: () => this.setState({ origin:id, originOpen:false, showResult:false, result:null }) }));
+    const transportList = [
+      ['marta','🚇 MARTA (Recommended)'],['driving','🚗 Driving'],['rideshare','🚕 Rideshare (Uber/Lyft)'],
+    ].map(([id,label]) => ({ id, label, onSelect: () => this.setState({ transport:id, transportOpen:false, showResult:false, result:null }) }));
+
+    const originSel = originList.find(o => o.id === s.origin);
+    const transportSel = transportList.find(t => t.id === s.transport);
+
+    const rowBg = (i) => i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)';
+    const dotColors = ['#00ff87','#ffd23f','#ff9500','#ff4444'];
+    const wavesRaw = [
+      ['Wave 1','4:30 – 5:15pm','Airport, Downtown','MARTA Priority','Free drink + Priority Gate','5,200'],
+      ['Wave 2','5:15 – 5:45pm','Midtown, Buckhead','MARTA / Rideshare','$10 concession credit','6,800'],
+      ['Wave 3','5:45 – 6:15pm','Decatur, Sandy Springs','Driving / Rideshare','Standard entry + $5 credit','4,900'],
+      ['Wave 4','6:00 – 6:45pm','Suburbs (30+ min)','Driving','Standard entry','3,100'],
+    ];
+    const cellBase = (i) => `padding:13px 8px;border-top:1px solid #1e1e2e;background:${rowBg(i)};color:#c9c9d8;display:flex;align-items:center;`;
+    const waves = wavesRaw.map((r,i) => ({
+      name: r[0], window: r[1], zones: r[2], transport: r[3], reward: r[4], fans: r[5],
+      dot: `background:${dotColors[i]};box-shadow:0 0 8px ${dotColors[i]}99;`,
+      cellL: cellBase(i) + 'color:#fff;',
+      cell: cellBase(i),
+      cellR: cellBase(i) + 'justify-content:flex-end;font-weight:600;color:#fff;',
+    }));
+
+    const canSubmit = !!(s.origin && s.transport);
+
+    return {
+      isOrganizer: isOrg,
+      isFan: !isOrg,
+      setOrganizer: () => this.setState({ view: 'organizer' }),
+      setFan: () => this.setState({ view: 'fan' }),
+      orgPillStyle: this.pill(isOrg),
+      fanPillStyle: this.pill(!isOrg),
+
+      co2Display: this.fmt(s.co2),
+      martaDisplay: this.fmt(s.marta),
+      co2Pct: Math.min(s.co2 / 62000 * 100, 100).toFixed(1) + '%',
+      martaPct: Math.min(s.marta / 2500 * 100, 100).toFixed(1) + '%',
+      chart: this.buildChart(),
+      waves,
+
+      origins: originList,
+      transports: transportList,
+      originOpen: s.originOpen,
+      transportOpen: s.transportOpen,
+      toggleOrigin: () => this.setState(st => ({ originOpen: !st.originOpen, transportOpen: false })),
+      toggleTransport: () => this.setState(st => ({ transportOpen: !st.transportOpen, originOpen: false })),
+      originLabel: originSel ? originSel.label : 'Select your origin',
+      transportLabel: transportSel ? transportSel.label : 'Select your transport',
+      originColor: originSel ? '#fff' : '#5a5a72',
+      transportColor: transportSel ? '#fff' : '#5a5a72',
+      originBorder: s.originOpen ? '#00ff87' : '#1e1e2e',
+      transportBorder: s.transportOpen ? '#00ff87' : '#1e1e2e',
+
+      ctaBg: canSubmit ? '#00ff87' : '#1a1a26',
+      ctaColor: canSubmit ? '#000' : '#5a5a72',
+      ctaCursor: canSubmit ? 'pointer' : 'not-allowed',
+      ctaShadow: canSubmit ? '0 0 20px rgba(0,255,135,0.4)' : 'none',
+
+      showForm: !s.showResult,
+      showResult: s.showResult,
+      result: s.result || { title:'', window:'', reward:'', transitBonus:false, color:'#00ff87', badgeBg:'transparent', badgeShadow:'none', badgeTextShadow:'none', badgeAnim:'none' },
+      submit: () => { if (!canSubmit) return; this.setState({ result: this.computeWave(s.origin, s.transport), showResult: true }); },
+      reset: () => this.setState({ showResult: false, result: null }),
+      mapsUrl: 'https://maps.google.com/?q=Mercedes-Benz+Stadium+Atlanta+GA',
+    };
+  }
+}
+</script>
+</body>
+</html>

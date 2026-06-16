@@ -19,7 +19,8 @@ button {
 @keyframes wiBlink   { 0%,100%{opacity:1} 50%{opacity:0.25} }
 @keyframes wiWipe    { from{transform:scaleX(0)} to{transform:scaleX(1)} }
 @keyframes wiPop     { 0%{transform:scale(0.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
-@keyframes wiSlideUp { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes wiSlideUp    { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes wiSlideRight { from{transform:translateX(100%)} to{transform:translateX(0)} }
 @keyframes wiPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(0,255,135,0.55), 0 0 24px rgba(0,255,135,0.35); }
   50%     { box-shadow: 0 0 0 10px rgba(0,255,135,0), 0 0 34px rgba(0,255,135,0.55); }

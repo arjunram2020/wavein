@@ -1,11 +1,11 @@
 "use client";
-import { CHART } from "@/lib/data";
+import { EVENTS } from "@/lib/data";
 
 // Self-contained animated SVG area chart built from the static CHART arrays.
 // No charting library, no network — same two-curve visual with a wipe-in
 // reveal and a dashed kickoff line.
-export default function ArrivalChart() {
-  const { times, withoutWaveIn, withWaveIn, kickoffIndex, yMax } = CHART;
+export default function ArrivalChart({ chart }) {
+  const { times, withoutWaveIn, withWaveIn, kickoffIndex, kickoffLabel = "Kickoff", yMax } = chart || EVENTS[0].chart;
 
   const W = 1000, H = 340, L = 58, R = 982, T = 18, B = 286;
   const X = (i) => L + (i * (R - L)) / (times.length - 1);
@@ -98,7 +98,7 @@ export default function ArrivalChart() {
       <line x1={kx} x2={kx} y1={T} y2={B} stroke="#ffffff" strokeWidth={1.5} strokeDasharray="5 5" opacity={0.6} />
       <rect x={kx - 44} y={T - 2} width={88} height={20} rx={5} fill="#1a1a26" stroke="#2a2a3a" />
       <text x={kx} y={T + 12} textAnchor="middle" fontSize={11} fill="#fff" fontWeight={600}>
-        Kickoff ⚽
+        {kickoffLabel}
       </text>
     </svg>
   );

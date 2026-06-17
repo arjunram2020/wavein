@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
 import { generateChart, parseTime, formatTime } from "@/lib/waveLogic";
@@ -268,15 +269,35 @@ function CreateEventPanel({ onSave, onClose }) {
 export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState(null); // { top, right } in viewport coords
   const [showCreate, setShowCreate] = useState(false);
   const pickerRef = useRef(null);
+  const triggerRef = useRef(null);
 
-  // Close the event dropdown when clicking anywhere outside it.
+  // Position the portal menu just under the trigger.
+  const openPicker = () => {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setMenuPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+    setPickerOpen((o) => !o);
+  };
+
+  // Close the event dropdown on outside click, scroll, or resize.
   useEffect(() => {
     if (!pickerOpen) return;
-    const onDown = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
+    const onDown = (e) => {
+      if (pickerRef.current?.contains(e.target)) return; // inside menu
+      if (triggerRef.current?.contains(e.target)) return; // on trigger
+      setPickerOpen(false);
+    };
+    const close = () => setPickerOpen(false);
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
   }, [pickerOpen]);
 
   const ev = events.find((e) => e.id === selectedId) || events[0];
@@ -305,8 +326,8 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* Event selector */}
-          <div ref={pickerRef} style={{ position: "relative" }}>
-            <div onClick={() => setPickerOpen((o) => !o)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 16px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12, cursor: "pointer" }}>
+          <div style={{ position: "relative" }}>
+            <div ref={triggerRef} onClick={openPicker} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 16px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12, cursor: "pointer" }}>
               <StadiumIcon />
               <div style={{ textAlign: "left", lineHeight: 1.25, whiteSpace: "nowrap" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{ev.label}</div>
@@ -314,8 +335,11 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
               </div>
               <span style={{ color: "var(--muted-3)", fontSize: 12, marginLeft: 4 }}>▾</span>
             </div>
-            {pickerOpen && (
-              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, minWidth: 260, background: "#1A2840", border: "1px solid rgba(255,255,255,.14)", borderRadius: 13, padding: 6, boxShadow: "0 24px 60px rgba(0,0,0,.6)", zIndex: 30, maxHeight: 320, overflow: "auto", animation: "modalIn .22s ease" }}>
+            {pickerOpen && menuPos && createPortal(
+              <div
+                ref={pickerRef}
+                style={{ position: "fixed", top: menuPos.top, right: menuPos.right, minWidth: 260, background: "#1A2840", border: "1px solid rgba(255,255,255,.14)", borderRadius: 13, padding: 6, boxShadow: "0 24px 60px rgba(0,0,0,.6)", zIndex: 1000, maxHeight: "min(60vh, 380px)", overflowY: "auto", animation: "modalIn .22s ease" }}
+              >
                 {events.map((e) => (
                   <button
                     key={e.id}
@@ -329,7 +353,8 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
                     </span>
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           <button onClick={() => setShowCreate(true)} style={{ padding: "11px 18px", borderRadius: 12, border: "1px solid rgba(232,180,90,.45)", background: "rgba(232,180,90,.1)", color: "var(--gold)", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ New Event</button>

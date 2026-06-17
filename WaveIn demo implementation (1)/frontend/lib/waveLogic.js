@@ -98,6 +98,80 @@ export function computeWave(origin, transport, earliestArrivalMin = 0, waveTable
   };
 }
 
+// Window start time (minutes) of a "H:MM – H:MMpm" string. The start often omits
+// am/pm (e.g. "4:30 – 5:15pm"), so inherit the suffix from the end when missing.
+function windowStart(windowStr) {
+  const [start, end] = windowStr.split(" – ");
+  const hasSuffix = /am|pm/i.test(start);
+  const suffix = /pm/i.test(end) ? "pm" : "am";
+  return parseTime(hasSuffix ? start : start + suffix);
+}
+
+// ─── Live arrival chart, built from actual fan submissions ───────────────────
+//
+// Each submission is { earliestArrivalMin, assignedWindow } captured when a fan
+// finishes the Fan View questionnaire.
+//   • red  (withoutWaveIn) — bucketed by the fan's self-reported EARLIEST arrival
+//                            time (what they'd do with no staggering)
+//   • green (withWaveIn)   — bucketed by the START of the wave window they were
+//                            ASSIGNED (where WaveIn actually routes them)
+//
+// Slots are 15-min buckets spanning the event's wave windows through kickoff.
+export function buildChartFromSubmissions(event, submissions) {
+  const koMin = parseTime(event.kickoff);
+  const startsAll = event.waveTable.map((w) => windowStart(w.window));
+  const startMin = Math.min(...startsAll);
+  const endMin = Math.max(koMin + 15, ...event.waveTable.map((w) => windowEnd(w.window)));
+
+  const slotCount = Math.round((endMin - startMin) / 15) + 1;
+  const slotMins = Array.from({ length: slotCount }, (_, i) => startMin + i * 15);
+  const times = slotMins.map(formatTime);
+
+  // Nearest slot index for a given minute value.
+  const slotIndex = (min) => {
+    const i = Math.round((min - startMin) / 15);
+    return Math.max(0, Math.min(slotCount - 1, i));
+  };
+
+  const withoutWaveIn = new Array(slotCount).fill(0);
+  const withWaveIn = new Array(slotCount).fill(0);
+
+  for (const s of submissions) {
+    withoutWaveIn[slotIndex(s.earliestArrivalMin)] += 1;
+    withWaveIn[slotIndex(windowStart(s.assignedWindow))] += 1;
+  }
+
+  const kickoffIndex = slotIndex(koMin);
+  const yMax = Math.max(10, ...withoutWaveIn, ...withWaveIn);
+
+  return {
+    times, withoutWaveIn, withWaveIn,
+    kickoffIndex, kickoffLabel: event.chart?.kickoffLabel || "Kickoff",
+    yMax: Math.ceil(yMax / 10) * 10,
+  };
+}
+
+// Seed an event with simulated fan submissions derived from its wave table, so
+// the chart looks populated before any real fans submit. Each wave contributes
+// its `fans` count: assigned to that wave's window, and "earliest" times skewed
+// toward kickoff (the last-minute rush WaveIn is built to spread out).
+export function seedSubmissions(event) {
+  const koMin = parseTime(event.kickoff);
+  const out = [];
+  for (const w of event.waveTable) {
+    const n = Math.max(1, Math.round(Number(String(w.fans).replace(/[^0-9.]/g, "")) / 100));
+    const wStart = windowStart(w.window);
+    for (let i = 0; i < n; i++) {
+      // Earliest arrivals cluster late (between this wave's start and kickoff),
+      // biased toward kickoff via squaring a random factor.
+      const r = Math.random() ** 2;
+      const earliest = Math.round((wStart + (koMin - wStart) * r) / 15) * 15;
+      out.push({ earliestArrivalMin: earliest, assignedWindow: w.window });
+    }
+  }
+  return out;
+}
+
 // Generate a simulated arrival chart for a newly created event.
 // kickoffStr: "7:00pm", totalFans: number
 export function generateChart(kickoffStr, totalFans) {

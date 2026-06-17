@@ -111,7 +111,7 @@ function EventPicker({ events, selectedId, onChange }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function FanView({ events }) {
+export default function FanView({ events, onFanSubmit }) {
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id);
   const [origin, setOrigin] = useState(null);
   const [transport, setTransport] = useState(null);
@@ -227,7 +227,15 @@ export default function FanView({ events }) {
         {!result && (
           <button
             onClick={() => {
-              if (canSubmit) setResult(computeWave(origin, transport, earliestSlot, selectedEvent?.waveTable));
+              if (!canSubmit) return;
+              const r = computeWave(origin, transport, earliestSlot, selectedEvent?.waveTable);
+              setResult(r);
+              // Record this fan's response so the Organizer chart reflects real
+              // submissions: red = their earliest time, green = assigned wave.
+              onFanSubmit?.(selectedEventId, {
+                earliestArrivalMin: earliestSlot,
+                assignedWindow: r.window,
+              });
             }}
             disabled={!canSubmit}
             style={{

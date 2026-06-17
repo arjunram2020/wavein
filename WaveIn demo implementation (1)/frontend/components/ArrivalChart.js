@@ -63,7 +63,7 @@ export default function ArrivalChart({ chart }) {
         textAnchor="middle"
         transform={`rotate(-90 14 ${(T + B) / 2})`}
       >
-        Fans / 15 min
+        Fan responses / 15 min
       </text>
 
       {times.map((t, i) => (

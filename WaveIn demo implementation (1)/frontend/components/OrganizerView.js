@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCountUp, fmt } from "@/lib/useCountUp";
-import { generateChart } from "@/lib/waveLogic";
+import { generateChart, buildChartFromSubmissions } from "@/lib/waveLogic";
 import { deriveCounters } from "@/lib/logistics";
 import ArrivalChart from "./ArrivalChart";
 
@@ -276,12 +276,21 @@ function CreateEventPanel({ onSave, onClose }) {
 }
 
 // ─── Main view ────────────────────────────────────────────────────────────────
-export default function OrganizerView({ events, onCreateEvent }) {
+export default function OrganizerView({ events, submissions = {}, onCreateEvent }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [showCreate, setShowCreate] = useState(false);
 
   const ev = events.find((e) => e.id === selectedId) || events[0];
-  const { counters, waveTable, chart } = ev;
+  const { counters, waveTable } = ev;
+
+  // Arrival chart is built live from real + seeded fan submissions:
+  //   red  = each fan's self-reported earliest arrival time
+  //   green = the wave window each fan was assigned
+  const evSubs = submissions[ev.id] || [];
+  const chart = useMemo(
+    () => buildChartFromSubmissions(ev, evSubs),
+    [ev, evSubs]
+  );
 
   const co2 = useCountUp(counters.co2Target, 20000, { min: 2, max: 8, minMs: 2000, maxMs: 3000 });
   const marta = useCountUp(counters.martaTarget, 25000, { min: 1, max: 1, minMs: 4000, maxMs: 6000 });

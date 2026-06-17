@@ -1,305 +1,244 @@
 "use client";
-import { useState, useMemo } from "react";
-import { ORIGINS, TRANSPORTS, MAPS_URL } from "@/lib/data";
+import { useMemo, useState } from "react";
+import { EVENTS, ORIGINS, TRANSPORTS, MAPS_URL } from "@/lib/data";
 import { computeWave, parseTime, formatTime } from "@/lib/waveLogic";
+import Reveal from "./Reveal";
 
-// ─── Shared dropdown ──────────────────────────────────────────────────────────
-function Dropdown({ label, placeholder, options, value, open, setOpen, onSelect }) {
-  const selected = options.find((o) => o.id === value);
+const serif = "var(--font-serif)";
+const EVENT = EVENTS[0]; // WC26 · Spain vs Cape Verde
+
+// Design wave→accent mapping for the result card (see handoff).
+const RESULT_COLORS = { 1: "#5BD6A0", 2: "#7FD8C0", 3: "#E8B45A", 4: "#D99A4E" };
+const GATES = { 1: "Gate A · Priority Lane", 2: "Gate B", 3: "Gate C", 4: "Gate D" };
+// Transport sub-labels keyed by lib id.
+const TRANSPORT_SUB = { marta: "Cleanest — priority waves", driving: "Personal vehicle", rideshare: "Uber / Lyft" };
+
+const labelStyle = { display: "block", fontSize: 13, fontWeight: 700, color: "var(--muted-1)", marginBottom: 8 };
+const fieldStyle = {
+  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+  padding: "14px 16px", borderRadius: 13, background: "rgba(255,255,255,.04)",
+  border: "1px solid rgba(255,255,255,.1)", cursor: "pointer", fontFamily: "inherit", fontSize: 14.5,
+  color: "var(--text)",
+};
+const menuStyle = {
+  position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "#1A2840",
+  border: "1px solid rgba(255,255,255,.14)", borderRadius: 13, padding: 6,
+  boxShadow: "0 24px 60px rgba(0,0,0,.6)", maxHeight: 260, overflow: "auto", animation: "modalIn .22s ease",
+};
+
+function Confetti() {
+  const bits = [
+    { left: "12%", w: 9, h: 9, bg: "#E8B45A", r: 2, dur: 2.4, delay: 0 },
+    { left: "28%", w: 8, h: 8, bg: "#5BD6A0", r: "50%", dur: 2.8, delay: 0.3 },
+    { left: "46%", w: 10, h: 6, bg: "#6FA0E0", r: 0, dur: 2.6, delay: 0.15 },
+    { left: "64%", w: 9, h: 9, bg: "#F0C572", r: 2, dur: 3, delay: 0.45 },
+    { left: "80%", w: 8, h: 8, bg: "#5BD6A0", r: "50%", dur: 2.5, delay: 0.2 },
+    { left: "90%", w: 7, h: 7, bg: "#E8B45A", r: 2, dur: 2.9, delay: 0.6 },
+  ];
   return (
-    <div style={{ position: "relative" }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "#c9c9d8" }}>{label}</label>
-      <div
-        onClick={() => setOpen(!open)}
-        style={{
-          marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "13px 15px", background: "#0d0d14",
-          border: `1px solid ${open ? "#00ff87" : "#1e1e2e"}`, borderRadius: 10,
-          cursor: "pointer", fontSize: 14, color: selected ? "#fff" : "#5a5a72",
-          transition: "border-color 0.15s",
-        }}
-      >
-        <span>{selected ? selected.label : placeholder}</span>
-        <span style={{ color: "#8888aa", fontSize: 11 }}>▼</span>
-      </div>
-      {open && (
-        <div style={{
-          position: "absolute", left: 0, right: 0, top: "100%", marginTop: 6, zIndex: 20,
-          background: "#0d0d14", border: "1px solid #1e2e24", borderRadius: 10,
-          overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,0.6)",
-        }}>
-          {options.map((o) => (
-            <div
-              key={o.id}
-              onClick={() => onSelect(o.id)}
-              style={{ padding: "11px 15px", fontSize: 14, cursor: "pointer", color: "#e6e6f0", borderBottom: "1px solid #15151f" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,255,135,0.08)"; e.currentTarget.style.color = "#00ff87"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#e6e6f0"; }}
-            >
-              {o.label}
-            </div>
-          ))}
-        </div>
-      )}
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", borderRadius: 24 }}>
+      {bits.map((b, i) => (
+        <span key={i} style={{ position: "absolute", left: b.left, top: 0, width: b.w, height: b.h, background: b.bg, borderRadius: b.r, animation: `confettiFall ${b.dur}s ease-in ${b.delay}s infinite` }} />
+      ))}
     </div>
   );
 }
 
-// ─── Event picker (grouped by category) ──────────────────────────────────────
-const CATEGORIES_ORDER = ["WC26", "Falcons", "Atlanta United", "SEC Championship", "Concert", "Dragon Con"];
-
-function EventPicker({ events, selectedId, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ev = events.find((e) => e.id === selectedId) || events[0];
-
-  const categories = CATEGORIES_ORDER.filter((c) => events.some((e) => e.category === c));
-  // Include any custom categories not in the preset order
-  events.forEach((e) => { if (!categories.includes(e.category)) categories.push(e.category); });
-
-  return (
-    <div style={{ position: "relative", marginBottom: 20 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "#c9c9d8" }}>Which event are you attending?</label>
-      <div
-        onClick={() => setOpen(!open)}
-        style={{
-          marginTop: 8, display: "flex", alignItems: "center", gap: 10, padding: "12px 15px",
-          background: "#0d0d14", border: `1px solid ${open ? "#00ff87" : "#1e1e2e"}`,
-          borderRadius: 10, cursor: "pointer", transition: "border-color 0.15s",
-        }}
-      >
-        <span style={{ fontSize: 18 }}>{ev?.emoji}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{ev?.label}</div>
-          <div style={{ fontSize: 11, color: "#8888aa", marginTop: 1 }}>{ev?.date} · {ev?.kickoff}</div>
-        </div>
-        <span style={{ color: "#8888aa", fontSize: 11 }}>▼</span>
-      </div>
-      {open && (
-        <div style={{
-          position: "absolute", left: 0, right: 0, top: "calc(100% + 6px)", zIndex: 30,
-          background: "#0d0d14", border: "1px solid #1e2e24", borderRadius: 12,
-          overflow: "hidden", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", maxHeight: 320, overflowY: "auto",
-        }}>
-          {categories.map((cat) => (
-            <div key={cat}>
-              <div style={{ padding: "8px 14px 3px", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#5a5a72", textTransform: "uppercase", background: "#0a0a12" }}>
-                {cat}
-              </div>
-              {events.filter((e) => e.category === cat).map((e) => (
-                <div
-                  key={e.id}
-                  onClick={() => { onChange(e.id); setOpen(false); }}
-                  style={{ padding: "10px 14px", cursor: "pointer", borderTop: "1px solid #15151f", display: "flex", alignItems: "center", gap: 10 }}
-                  onMouseEnter={(el) => { el.currentTarget.style.background = "rgba(0,255,135,0.07)"; }}
-                  onMouseLeave={(el) => { el.currentTarget.style.background = "transparent"; }}
-                >
-                  <span style={{ fontSize: 16 }}>{e.emoji}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: e.id === selectedId ? 700 : 400, color: e.id === selectedId ? "#00ff87" : "#e6e6f0" }}>
-                      {e.label}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#5a5a72" }}>{e.date} · {e.kickoff}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-export default function FanView({ events, onFanSubmit }) {
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id);
+export default function FanView() {
   const [origin, setOrigin] = useState(null);
   const [transport, setTransport] = useState(null);
-  const [originOpen, setOriginOpen] = useState(false);
-  const [transportOpen, setTransportOpen] = useState(false);
-  const [earliestSlot, setEarliestSlot] = useState(null);
+  const [time, setTime] = useState(null); // minutes from midnight
+  const [openDD, setOpenDD] = useState(""); // 'origin' | 'transport' | ''
   const [result, setResult] = useState(null);
 
-  const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
+  // Arrival slots derived from the event's wave windows (start inherits the
+  // window's am/pm so evening events aren't misread as AM).
+  const slots = useMemo(() => {
+    const wt = EVENT.waveTable;
+    const meridiem = (t) => (/pm/i.test(t) ? "pm" : /am/i.test(t) ? "am" : "");
+    const startMin = (w) => { const [s, e] = w.window.split(" – "); return parseTime(/am|pm/i.test(s) ? s : s + meridiem(e)); };
+    const endMin = (w) => parseTime(w.window.split(" – ")[1]);
+    const lo = Math.min(...wt.map(startMin));
+    const hi = Math.max(...wt.map(endMin));
+    const out = [];
+    for (let m = lo; m <= hi; m += 15) out.push({ value: m, label: formatTime(m) });
+    return out;
+  }, []);
 
-  // Derive arrival slots from the selected event's wave table windows
-  const arrivalSlots = useMemo(() => {
-    if (!selectedEvent?.waveTable?.length) return [];
-    const parseWindowStart = (w) => parseTime(w.window.split(" – ")[0]);
-    const parseWindowEnd = (w) => parseTime(w.window.split(" – ")[1]);
-    const startMin = Math.min(...selectedEvent.waveTable.map(parseWindowStart));
-    const endMin = Math.max(...selectedEvent.waveTable.map(parseWindowEnd));
-    const slots = [];
-    for (let m = startMin; m <= endMin; m += 15) slots.push({ value: m, label: formatTime(m) });
-    return slots;
-  }, [selectedEvent]);
+  const doorsOpen = slots[0]?.label?.replace(/(am|pm)$/, "") ?? "";
+  const canSubmit = !!(origin && transport && time !== null);
+  const originLabel = ORIGINS.find((o) => o.id === origin)?.label;
+  const transportLabel = TRANSPORTS.find((t) => t.id === transport)?.label;
 
-  const canSubmit = !!(origin && transport && earliestSlot !== null);
-
-  const reset = () => { setResult(null); setEarliestSlot(null); };
-
-  const handleEventChange = (id) => {
-    setSelectedEventId(id);
-    setResult(null);
-    setEarliestSlot(null);
-    setOrigin(null);
-    setTransport(null);
+  const submit = () => {
+    if (!canSubmit) return;
+    const r = computeWave(origin, transport, time, EVENT.waveTable);
+    const label = r.priority ? "PRIORITY" : r.wave <= 2 ? "EARLY" : "STANDARD";
+    setResult({
+      wave: r.wave,
+      label,
+      window: r.window,
+      color: RESULT_COLORS[r.wave] || "#5BD6A0",
+      transit: r.transitBonus,
+      reward: r.reward,
+      gate: GATES[r.wave] || "Gate",
+    });
   };
 
-  const badgeStyle = (r) => ({
-    display: "inline-block", padding: "14px 26px", borderRadius: 12,
-    border: `2px solid ${r.color}`, color: r.color, fontSize: 24, fontWeight: 700,
-    letterSpacing: "0.04em", textTransform: "uppercase", background: `${r.color}1a`,
-    boxShadow: `0 0 24px ${r.color}55`, textShadow: `0 0 14px ${r.color}99`,
-    animation: r.priority ? "wiPulse 2s ease-in-out infinite" : "none",
-  });
+  const wrap = {
+    position: "relative", zIndex: 1, minHeight: "calc(100vh - 70px)",
+    padding: "clamp(28px,5vw,60px) clamp(18px,4vw,40px) 80px",
+    display: "flex", alignItems: "flex-start", justifyContent: "center",
+  };
+  const glow = { position: "absolute", inset: 0, background: "radial-gradient(70% 50% at 50% 0%,rgba(224,162,74,.14),transparent 65%)", pointerEvents: "none" };
 
-  return (
-    <div style={{ minHeight: "calc(100vh - 64px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-      <div style={{ width: "100%", maxWidth: 480, background: "#111118", border: "1px solid #1e2e24", borderRadius: 16, padding: 30, boxShadow: "0 0 40px rgba(0,255,135,0.08)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: "rgba(0,255,135,0.12)", border: "1px solid rgba(0,255,135,0.3)", color: "#00ff87", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", marginBottom: 16 }}>
-          {selectedEvent?.emoji} {selectedEvent?.category?.toUpperCase() || "WAVEIN"}
-        </div>
-        <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700 }}>Find Your Wave</h1>
-        <div style={{ fontSize: 13, color: "#8888aa", marginTop: 6, marginBottom: 24 }}>
-          {selectedEvent?.label} · {selectedEvent?.date} · {selectedEvent?.kickoff}
-        </div>
-
-        {/* Event picker */}
-        <EventPicker events={events} selectedId={selectedEventId} onChange={handleEventChange} />
-
-        {/* Origin */}
-        <div style={{ marginTop: 6 }}>
-          <Dropdown
-            label="Where are you coming from?"
-            placeholder="Select your origin"
-            options={ORIGINS}
-            value={origin}
-            open={originOpen}
-            setOpen={(v) => { setOriginOpen(v); setTransportOpen(false); }}
-            onSelect={(id) => { setOrigin(id); setOriginOpen(false); setResult(null); }}
-          />
-        </div>
-
-        {/* Transport */}
-        <div style={{ marginTop: 18 }}>
-          <Dropdown
-            label="How are you getting here?"
-            placeholder="Select your transport"
-            options={TRANSPORTS}
-            value={transport}
-            open={transportOpen}
-            setOpen={(v) => { setTransportOpen(v); setOriginOpen(false); }}
-            onSelect={(id) => { setTransport(id); setTransportOpen(false); setResult(null); }}
-          />
-        </div>
-
-        {/* Earliest arrival */}
-        <div style={{ marginTop: 18 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: "#c9c9d8" }}>
-            Earliest you could arrive?{" "}
-            <span style={{ color: "#5a5a72", fontWeight: 400 }}>
-              (doors open · {selectedEvent?.waveTable?.[0]?.window?.split(" – ")?.[0]})
-            </span>
-          </label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-            {arrivalSlots.map((slot) => {
-              const selected = earliestSlot === slot.value;
-              return (
-                <button
-                  key={slot.value}
-                  onClick={() => { setEarliestSlot(slot.value); setResult(null); }}
-                  style={{
-                    padding: "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                    cursor: "pointer", border: "1px solid", transition: "all 0.12s",
-                    ...(selected
-                      ? { background: "rgba(0,255,135,0.15)", borderColor: "#00ff87", color: "#00ff87" }
-                      : { background: "#0d0d14", borderColor: "#1e1e2e", color: "#8888aa" }),
-                  }}
-                >
-                  {slot.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {!result && (
-          <button
-            onClick={() => {
-              if (!canSubmit) return;
-              const r = computeWave(origin, transport, earliestSlot, selectedEvent?.waveTable);
-              setResult(r);
-              // Record this fan's response so the Organizer chart reflects real
-              // submissions: red = their earliest time, green = assigned wave.
-              onFanSubmit?.(selectedEventId, {
-                earliestArrivalMin: earliestSlot,
-                assignedWindow: r.window,
-              });
-            }}
-            disabled={!canSubmit}
-            style={{
-              marginTop: 26, width: "100%", padding: 15, border: "none", borderRadius: 10,
-              fontSize: 15, fontWeight: 700, transition: "transform 0.15s, box-shadow 0.15s",
-              ...(canSubmit
-                ? { background: "#00ff87", color: "#000", cursor: "pointer", boxShadow: "0 0 20px rgba(0,255,135,0.4)" }
-                : { background: "#1a1a26", color: "#5a5a72", cursor: "not-allowed" }),
-            }}
-            onMouseEnter={(e) => { if (canSubmit) { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 0 28px rgba(0,255,135,0.6)"; } }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = canSubmit ? "0 0 20px rgba(0,255,135,0.4)" : "none"; }}
-          >
-            Get My Wave →
-          </button>
-        )}
-
-        {result && (
-          <div style={{ marginTop: 24, borderTop: "1px solid #1e1e2e", paddingTop: 24, animation: "wiSlideUp 0.45s ease" }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={badgeStyle(result)}>{result.title}</div>
-            </div>
-
-            <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 15 }}>
-                <span style={{ fontSize: 20 }}>🕔</span>
-                <span>Arrive <strong>{result.window}</strong></span>
+  if (result) {
+    const rc = result.color;
+    return (
+      <div style={wrap}>
+        <div style={glow} />
+        <div style={{ position: "relative", width: "100%", maxWidth: 520 }}>
+          <Confetti />
+          <div style={{ position: "relative", background: "linear-gradient(180deg,#17243E,#101A2E)", border: `1px solid ${rc}66`, borderRadius: 24, padding: "clamp(28px,4vw,40px)", boxShadow: "0 40px 110px rgba(0,0,0,.55)", animation: "resultPop .65s cubic-bezier(.16,1,.3,1)", textAlign: "center", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: `radial-gradient(circle,${rc}33,transparent 70%)` }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--muted-2)", textTransform: "uppercase" }}>Your assignment</div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginTop: 14, padding: "12px 26px", borderRadius: 999, background: `${rc}1A`, border: `1px solid ${rc}66` }}>
+                <span style={{ fontFamily: serif, fontSize: 34, lineHeight: 1, color: rc }}>Wave {result.wave}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "1.5px", color: rc }}>{result.label}</span>
               </div>
+              <div style={{ marginTop: 24, fontSize: 13, fontWeight: 700, letterSpacing: "1px", color: "var(--muted-3)", textTransform: "uppercase" }}>Arrive between</div>
+              <div style={{ fontFamily: serif, fontSize: "clamp(34px,6vw,52px)", color: "var(--text-bright)", lineHeight: 1.05, marginTop: 4 }}>{result.window}</div>
 
-              {result.transitBonus && (
-                <div style={{ display: "inline-flex", alignSelf: "flex-start", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 999, background: "rgba(0,255,135,0.12)", border: "1px solid rgba(0,255,135,0.35)", color: "#00ff87", fontSize: 13, fontWeight: 600 }}>
-                  🌱 Transit Bonus Applied
+              {result.transit && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 9, marginTop: 18, padding: "9px 16px", borderRadius: 12, background: "rgba(91,214,160,.12)", border: "1px solid rgba(91,214,160,.3)", fontSize: 13.5, fontWeight: 700, color: "var(--green)" }}>
+                  🌱 Transit Bonus Applied — you bumped to an earlier wave
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 15 }}>
-                <span style={{ fontSize: 20 }}>🎁</span>
-                <span><span style={{ color: "#8888aa" }}>Your Reward:</span><br /><strong>{result.reward}</strong></span>
+              <div style={{ marginTop: 22, padding: 18, borderRadius: 16, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.09)", textAlign: "left", display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+                  <span style={{ fontSize: 22 }}>🎁</span>
+                  <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-3)", textTransform: "uppercase" }}>Your reward</div><div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{result.reward}</div></div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 13, borderTop: "1px solid rgba(255,255,255,.07)", paddingTop: 14 }}>
+                  <span style={{ fontSize: 22 }}>🚪</span>
+                  <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-3)", textTransform: "uppercase" }}>Entry</div><div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{result.gate}</div></div>
+                </div>
               </div>
-            </div>
 
-            <a
-              href={MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ marginTop: 20, display: "block", textAlign: "center", textDecoration: "none", width: "100%", padding: 15, background: "#00ff87", color: "#000", fontWeight: 700, fontSize: 15, borderRadius: 10, boxShadow: "0 0 22px rgba(0,255,135,0.45)" }}
-            >
-              Get Directions →
-            </a>
-
-            <div
-              onClick={reset}
-              style={{ marginTop: 14, textAlign: "center", fontSize: 13, color: "#8888aa", cursor: "pointer" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#8888aa")}
-            >
-              ← Try different options
-            </div>
-
-            <div style={{ marginTop: 18, fontSize: 12, color: "#5a5a72", lineHeight: 1.6, textAlign: "center" }}>
-              💡 Arriving during your wave earns maximum rewards and guarantees express entry.
+              <a href={MAPS_URL} target="_blank" rel="noopener noreferrer" style={{ width: "100%", marginTop: 22, padding: 16, borderRadius: 14, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 16, fontWeight: 700, color: "#1A1206", background: "linear-gradient(180deg,#F0C572,#E0A24A)", boxShadow: "0 12px 30px rgba(224,162,74,.32)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none", boxSizing: "border-box" }}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1A1206" strokeWidth="2"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.4" /></svg>
+                Get Directions
+              </a>
+              <button onClick={() => setResult(null)} style={{ marginTop: 12, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, color: "var(--muted-3)" }}>← Start over</button>
             </div>
           </div>
-        )}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div style={wrap}>
+      <div style={glow} />
+      <Reveal style={{ position: "relative", width: "100%", maxWidth: 560 }}>
+        <div style={{ background: "linear-gradient(180deg,#17243E,#101A2E)", border: "1px solid rgba(232,180,90,.18)", borderRadius: 24, padding: "clamp(26px,4vw,40px)", boxShadow: "0 40px 100px rgba(0,0,0,.5)" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 13px", borderRadius: 999, background: "linear-gradient(90deg,rgba(91,214,160,.18),rgba(232,180,90,.18))", border: "1px solid rgba(232,180,90,.3)", fontSize: 12, fontWeight: 800, letterSpacing: "1.5px", color: "var(--text)" }}>
+            ⚽ {EVENT.category}
+          </div>
+          <h1 style={{ fontFamily: serif, fontWeight: 400, fontSize: "clamp(38px,6vw,58px)", letterSpacing: "-.5px", margin: "16px 0 4px", lineHeight: 1, color: "var(--text-bright)" }}>Find Your Wave</h1>
+          <p style={{ margin: "0 0 24px", fontSize: 14.5, color: "var(--muted-2)" }}>{EVENT.label} · {EVENT.date} · {EVENT.kickoff}</p>
+
+          {/* Event (read-only) */}
+          <div style={{ position: "relative", zIndex: 5, marginBottom: 18 }}>
+            <label style={labelStyle}>Which event are you attending?</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px", borderRadius: 13, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" strokeWidth="1.5"><ellipse cx="12" cy="12" rx="9" ry="5" /><path d="M3 12c0 3 4 5 9 5s9-2 9-5" /></svg>
+              <div style={{ flex: 1, lineHeight: 1.2 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>{EVENT.label}</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted-3)" }}>{EVENT.date} · {EVENT.kickoff}</div>
+              </div>
+              <span style={{ color: "var(--muted-3)" }}>▾</span>
+            </div>
+          </div>
+
+          {/* Origin */}
+          <div style={{ position: "relative", zIndex: openDD === "origin" ? 30 : 20, marginBottom: 18 }}>
+            <label style={labelStyle}>Where are you coming from?</label>
+            <button onClick={() => setOpenDD((d) => (d === "origin" ? "" : "origin"))} style={fieldStyle}>
+              <span style={origin ? { color: "var(--text)", fontWeight: 600 } : { color: "var(--muted-3)" }}>{originLabel || "Select your origin"}</span>
+              <span style={{ color: "var(--muted-3)" }}>▾</span>
+            </button>
+            {openDD === "origin" && (
+              <div style={menuStyle}>
+                {ORIGINS.map((o) => (
+                  <button key={o.id} onClick={() => { setOrigin(o.id); setOpenDD(""); }} style={{ width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 9, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, color: "#E4E9F1" }}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Transport */}
+          <div style={{ position: "relative", zIndex: openDD === "transport" ? 30 : 15, marginBottom: 18 }}>
+            <label style={labelStyle}>How are you getting here?</label>
+            <button onClick={() => setOpenDD((d) => (d === "transport" ? "" : "transport"))} style={fieldStyle}>
+              <span style={transport ? { color: "var(--text)", fontWeight: 600 } : { color: "var(--muted-3)" }}>{transportLabel || "Select your transport"}</span>
+              <span style={{ color: "var(--muted-3)" }}>▾</span>
+            </button>
+            {openDD === "transport" && (
+              <div style={menuStyle}>
+                {TRANSPORTS.map((t) => (
+                  <button key={t.id} onClick={() => { setTransport(t.id); setOpenDD(""); }} style={{ width: "100%", textAlign: "left", padding: "11px 14px", borderRadius: 9, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", color: "#E4E9F1", display: "block" }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 600, display: "block" }}>{t.label}</span>
+                    <span style={{ fontSize: 12, color: "var(--muted-3)" }}>{TRANSPORT_SUB[t.id]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Time grid */}
+          <div style={{ marginBottom: 26 }}>
+            <label style={labelStyle}>Earliest you could arrive? <span style={{ color: "var(--muted-3)", fontWeight: 500 }}>(doors open · {doorsOpen})</span></label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
+              {slots.map((s) => {
+                const sel = time === s.value;
+                return (
+                  <button
+                    key={s.value}
+                    onClick={() => setTime(s.value)}
+                    style={{
+                      padding: "13px 0", borderRadius: 12, fontFamily: "inherit", fontSize: 14.5, fontWeight: 600,
+                      cursor: "pointer", textAlign: "center", transition: "all .22s",
+                      ...(sel
+                        ? { border: "1px solid rgba(232,180,90,.6)", background: "linear-gradient(180deg,rgba(240,197,114,.22),rgba(224,162,74,.12))", color: "var(--text)", boxShadow: "0 0 0 1px rgba(232,180,90,.25),0 6px 16px rgba(224,162,74,.18)" }
+                        : { border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.03)", color: "var(--muted-1)" }),
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            onClick={submit}
+            disabled={!canSubmit}
+            style={{
+              width: "100%", padding: 16, borderRadius: 14, border: "none", fontFamily: "inherit", fontSize: 16.5, fontWeight: 700, transition: "all .3s",
+              ...(canSubmit
+                ? { cursor: "pointer", color: "#1A1206", background: "linear-gradient(180deg,#F0C572,#E0A24A)", boxShadow: "0 12px 30px rgba(224,162,74,.34)" }
+                : { cursor: "not-allowed", color: "var(--muted-4)", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }),
+            }}
+          >
+            Get My Wave →
+          </button>
+        </div>
+      </Reveal>
     </div>
   );
 }

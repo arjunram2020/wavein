@@ -1,48 +1,40 @@
 "use client";
+import Logo from "./Logo";
 
-export default function Nav({ view, setView }) {
-  const pill = (active) =>
-    active
-      ? {
-          padding: "8px 18px", borderRadius: 999, border: "1px solid #00ff87",
-          background: "#00ff87", color: "#000", fontWeight: 700, fontSize: 13,
-          cursor: "pointer", boxShadow: "0 0 16px rgba(0,255,135,0.4)",
-        }
-      : {
-          padding: "8px 18px", borderRadius: 999, border: "1px solid #1e1e2e",
-          background: "transparent", color: "#fff", fontWeight: 600, fontSize: 13,
-          cursor: "pointer",
-        };
+// Sticky top nav shared across all screens. The segmented control reflects the
+// current screen and links directly to the organizer / fan views; the logo
+// returns to the landing page.
+export default function Nav({ screen, onHome, onOrganizer, onFan }) {
+  const pill = (active) => ({
+    padding: "8px 16px",
+    borderRadius: 999,
+    border: "none",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 13.5,
+    fontWeight: 600,
+    transition: "all .25s",
+    ...(active
+      ? { background: "linear-gradient(180deg,#F0C572,#E0A24A)", color: "#1A1206", boxShadow: "0 4px 14px rgba(224,162,74,.3)" }
+      : { background: "transparent", color: "#A9B5C8" }),
+  });
 
   return (
-    <div
+    <nav
       style={{
-        position: "sticky", top: 0, zIndex: 50, display: "flex",
-        alignItems: "center", justifyContent: "space-between",
-        padding: "0 28px", height: 64, background: "#0d0d14",
-        borderBottom: "1px solid #1e1e2e",
+        position: "sticky", top: 0, zIndex: 50, display: "flex", alignItems: "center",
+        justifyContent: "space-between", padding: "16px clamp(20px,4vw,44px)",
+        background: "rgba(11,18,31,.72)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        borderBottom: "1px solid rgba(255,255,255,.07)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 30, height: 30, borderRadius: 8, background: "#00ff87",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, boxShadow: "0 0 16px rgba(0,255,135,0.5)",
-          }}
-        >
-          ⚡
-        </div>
-        <span style={{ fontSize: 21, fontWeight: 700, color: "#fff" }}>WaveIn</span>
+      <button onClick={onHome} style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <Logo idSuffix="nav" />
+      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 999, padding: 4 }}>
+        <button onClick={onOrganizer} style={pill(screen === "organizer")}>Organizer View</button>
+        <button onClick={onFan} style={pill(screen === "fan")}>Fan View</button>
       </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={() => setView("organizer")} style={pill(view === "organizer")}>
-          Organizer View
-        </button>
-        <button onClick={() => setView("fan")} style={pill(view === "fan")}>
-          Fan View
-        </button>
-      </div>
-    </div>
+    </nav>
   );
 }

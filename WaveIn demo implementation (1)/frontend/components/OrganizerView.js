@@ -31,6 +31,12 @@ const panel = {
   border: "1px solid rgba(255,255,255,.09)", borderRadius: 20,
 };
 
+// Small monospace caption used to surface the math behind each impact number.
+const formula = {
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: 10.5, lineHeight: 1.45, color: "var(--muted-3)", letterSpacing: ".2px",
+};
+
 function StatCard({ label, value, unit, sub, color, icon, bg, border }) {
   return (
     <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 18, padding: 22 }}>
@@ -433,32 +439,50 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
           </div>
 
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>CO₂ saved this event</div>
-          <div style={{ margin: "6px 0 12px", lineHeight: 1 }}>
+          <div style={{ margin: "6px 0 8px", lineHeight: 1 }}>
             <span style={{ fontFamily: serif, fontSize: 48, color: "var(--green)" }}>{fmt(co2)}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: "var(--green)", marginLeft: 6 }}>kg</span>
+          </div>
+          <div style={{ ...formula, marginBottom: 12 }}>
+            = Σ (fans × km × 2 × 0.21 ÷ 2.0) over MARTA waves
+            <div style={{ marginTop: 3, color: "var(--muted-4)" }}>MARTA waves = fans from rail-served zones (Airport, Downtown, Midtown) — each skips a round-trip drive</div>
           </div>
           <div style={{ height: 8, borderRadius: 5, background: "rgba(255,255,255,.06)", overflow: "hidden", marginBottom: 22 }}>
             <div style={{ height: "100%", width: `${co2Pct}%`, borderRadius: 5, background: "linear-gradient(90deg,#46C08A,#5BD6A0)", transition: "width .6s ease" }} />
           </div>
 
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Car → MARTA shifts</div>
-          <div style={{ margin: "6px 0 12px", lineHeight: 1 }}>
+          <div style={{ margin: "6px 0 8px", lineHeight: 1 }}>
             <span style={{ fontFamily: serif, fontSize: 36, color: "var(--blue)" }}>{fmt(counters.martaTarget)}</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", marginLeft: 6 }}>fans</span>
+          </div>
+          <div style={{ ...formula, marginBottom: 12 }}>
+            = Σ fans of MARTA-routed waves
+            <div style={{ marginTop: 3, color: "var(--muted-4)" }}>fans near stations are steered onto transit; out-of-range zones (suburbs) still drive</div>
           </div>
           <div style={{ height: 8, borderRadius: 5, background: "rgba(255,255,255,.06)", overflow: "hidden", marginBottom: 24 }}>
             <div style={{ height: "100%", width: `${martaPct}%`, borderRadius: 5, background: "linear-gradient(90deg,#4A78C0,#6FA0E0)", transition: "width .6s ease" }} />
           </div>
 
           <div style={{ paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.09)", fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Projected: full season</div>
-          <div style={{ margin: "6px 0 16px" }}>
+          <div style={{ margin: "6px 0 6px" }}>
             <span style={{ fontFamily: serif, fontSize: 32, color: "var(--text)" }}>{SEASON.co2.toLocaleString("en-US")} kg</span>{" "}
             <span style={{ fontSize: 14, color: "var(--green-soft)" }}>CO₂ eliminated</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🌳</span><strong style={{ color: "var(--text)" }}>{SEASON.trees.toLocaleString("en-US")}</strong> trees planted</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🚗</span><strong style={{ color: "var(--text)" }}>{SEASON.cars}</strong> cars removed for a year</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>✈️</span><strong style={{ color: "var(--text)" }}>{SEASON.flights}</strong> transatlantic flights offset</div>
+          <div style={{ ...formula, marginBottom: 16 }}>= per-event CO₂ × season events; equivalencies below</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🌳</span><strong style={{ color: "var(--text)" }}>{SEASON.trees.toLocaleString("en-US")}</strong> trees planted</div>
+              <div style={{ ...formula, marginLeft: 30, marginTop: 2 }}>= 408,000 ÷ 186 kg CO₂ / tree·yr</div>
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🚗</span><strong style={{ color: "var(--text)" }}>{SEASON.cars}</strong> cars removed for a year</div>
+              <div style={{ ...formula, marginLeft: 30, marginTop: 2 }}>= 408,000 ÷ 4,584 kg CO₂ / car·yr</div>
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>✈️</span><strong style={{ color: "var(--text)" }}>{SEASON.flights}</strong> transatlantic flights offset</div>
+              <div style={{ ...formula, marginLeft: 30, marginTop: 2 }}>= 408,000 ÷ 8,000 kg CO₂ / flight</div>
+            </div>
           </div>
           <p style={{ margin: "20px 0 0", fontSize: 11, lineHeight: 1.5, color: "var(--muted-4)" }}>
             Methodology: counters derived from each wave&apos;s fan count, transport mode, and driving distance to Mercedes-Benz Stadium. EPA avg 0.21 kg CO₂/km · round trip · 2.0 occupancy.

@@ -5,13 +5,17 @@ import { computeWave, parseTime, formatTime } from "@/lib/waveLogic";
 import Reveal from "./Reveal";
 
 const serif = "var(--font-serif)";
-const EVENT = EVENTS[0]; // WC26 · Spain vs Cape Verde
 
 // Design wave→accent mapping for the result card (see handoff).
 const RESULT_COLORS = { 1: "#5BD6A0", 2: "#7FD8C0", 3: "#E8B45A", 4: "#D99A4E" };
 const GATES = { 1: "Gate A · Priority Lane", 2: "Gate B", 3: "Gate C", 4: "Gate D" };
 // Transport sub-labels keyed by lib id.
-const TRANSPORT_SUB = { marta: "Cleanest — priority waves", driving: "Personal vehicle", rideshare: "Uber / Lyft" };
+const TRANSPORT_SUB = {
+  "marta-train": "Cleanest — priority waves",
+  "marta-bus": "Transit — earns the bonus",
+  driving: "Personal vehicle",
+  rideshare: "Uber / Lyft",
+};
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 700, color: "var(--muted-1)", marginBottom: 8 };
 const fieldStyle = {
@@ -44,12 +48,15 @@ function Confetti() {
   );
 }
 
-export default function FanView() {
+export default function FanView({ events = EVENTS, onFanSubmit }) {
+  const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [origin, setOrigin] = useState(null);
   const [transport, setTransport] = useState(null);
   const [time, setTime] = useState(null); // minutes from midnight
-  const [openDD, setOpenDD] = useState(""); // 'origin' | 'transport' | ''
+  const [openDD, setOpenDD] = useState(""); // 'event' | 'origin' | 'transport' | ''
   const [result, setResult] = useState(null);
+
+  const EVENT = events.find((e) => e.id === selectedId) || events[0];
 
   // Arrival slots derived from the event's wave windows (start inherits the
   // window's am/pm so evening events aren't misread as AM).
@@ -63,7 +70,7 @@ export default function FanView() {
     const out = [];
     for (let m = lo; m <= hi; m += 15) out.push({ value: m, label: formatTime(m) });
     return out;
-  }, []);
+  }, [EVENT]);
 
   const doorsOpen = slots[0]?.label?.replace(/(am|pm)$/, "") ?? "";
   const canSubmit = !!(origin && transport && time !== null);
@@ -83,6 +90,9 @@ export default function FanView() {
       reward: r.reward,
       gate: GATES[r.wave] || "Gate",
     });
+    // Record this fan's response so the Organizer chart reflects real
+    // submissions: red = their earliest time, green = assigned wave.
+    onFanSubmit?.(EVENT.id, { earliestArrivalMin: time, assignedWindow: r.window });
   };
 
   const wrap = {
@@ -150,17 +160,39 @@ export default function FanView() {
           <h1 style={{ fontFamily: serif, fontWeight: 400, fontSize: "clamp(38px,6vw,58px)", letterSpacing: "-.5px", margin: "16px 0 4px", lineHeight: 1, color: "var(--text-bright)" }}>Find Your Wave</h1>
           <p style={{ margin: "0 0 24px", fontSize: 14.5, color: "var(--muted-2)" }}>{EVENT.label} · {EVENT.date} · {EVENT.kickoff}</p>
 
-          {/* Event (read-only) */}
-          <div style={{ position: "relative", zIndex: 5, marginBottom: 18 }}>
+          {/* Event selector */}
+          <div style={{ position: "relative", zIndex: openDD === "event" ? 40 : 5, marginBottom: 18 }}>
             <label style={labelStyle}>Which event are you attending?</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px", borderRadius: 13, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)" }}>
+            <button onClick={() => setOpenDD((d) => (d === "event" ? "" : "event"))} style={{ ...fieldStyle, gap: 11 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" strokeWidth="1.5"><ellipse cx="12" cy="12" rx="9" ry="5" /><path d="M3 12c0 3 4 5 9 5s9-2 9-5" /></svg>
-              <div style={{ flex: 1, lineHeight: 1.2 }}>
+              <div style={{ flex: 1, lineHeight: 1.2, textAlign: "left" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>{EVENT.label}</div>
                 <div style={{ fontSize: 11.5, color: "var(--muted-3)" }}>{EVENT.date} · {EVENT.kickoff}</div>
               </div>
               <span style={{ color: "var(--muted-3)" }}>▾</span>
-            </div>
+            </button>
+            {openDD === "event" && (
+              <div style={menuStyle}>
+                {events.map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      setSelectedId(e.id);
+                      setOpenDD("");
+                      // Reset the rest of the form when the event changes.
+                      setOrigin(null); setTransport(null); setTime(null);
+                    }}
+                    style={{ width: "100%", textAlign: "left", padding: "11px 14px", borderRadius: 9, background: e.id === selectedId ? "rgba(232,180,90,.14)" : "none", border: "none", cursor: "pointer", fontFamily: "inherit", color: "#E4E9F1", display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <span style={{ fontSize: 16 }}>{e.emoji}</span>
+                    <span>
+                      <span style={{ display: "block", fontSize: 14, fontWeight: 600 }}>{e.label}</span>
+                      <span style={{ display: "block", fontSize: 11.5, color: "var(--muted-3)" }}>{e.date} · {e.kickoff}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Origin */}

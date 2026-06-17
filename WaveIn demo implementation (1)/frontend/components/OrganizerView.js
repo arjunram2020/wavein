@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
+import { buildChartFromSubmissions } from "@/lib/waveLogic";
 import Reveal from "./Reveal";
 import ArrivalChart from "./ArrivalChart";
 
@@ -43,7 +44,7 @@ function StadiumIcon({ stroke = "#E8B45A", size = 20 }) {
   );
 }
 
-export default function OrganizerView({ events = EVENTS }) {
+export default function OrganizerView({ events = EVENTS, submissions = {} }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [pickerOpen, setPickerOpen] = useState(false);
 

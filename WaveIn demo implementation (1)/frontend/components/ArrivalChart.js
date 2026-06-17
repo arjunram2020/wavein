@@ -39,6 +39,18 @@ export default function ArrivalChart({ chart, variant = "dashboard", height = 34
   const data = times.map((t, i) => ({ time: t, without: withoutWaveIn[i], with: withWaveIn[i] }));
   const kickoffTime = times[kickoffIndex];
 
+  // The dashboard renders live submission data whose times/scale vary per event,
+  // so derive ticks from the data instead of the fixed landing-page ticks. ~6
+  // evenly-spaced x labels; 4 round y steps up to yMax.
+  const dynamic = variant === "dashboard";
+  const xTicks = dynamic
+    ? times.filter((_, i) => i % Math.max(1, Math.ceil(times.length / 6)) === 0)
+    : cfg.xTicks;
+  const yTicks = dynamic
+    ? Array.from({ length: 5 }, (_, i) => Math.round((yMax / 4) * i))
+    : cfg.yTicks;
+  const yAxisLabel = dynamic ? "Fan responses / 15 min" : "Fans / 15 min";
+
   return (
     <div ref={ref} style={{ width: "100%" }}>
       <ResponsiveContainer width="100%" height={height}>
@@ -46,7 +58,7 @@ export default function ArrivalChart({ chart, variant = "dashboard", height = 34
           <CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" />
           <XAxis
             dataKey="time"
-            ticks={cfg.xTicks}
+            ticks={xTicks}
             tick={axisTick}
             tickLine={false}
             axisLine={false}
@@ -55,7 +67,7 @@ export default function ArrivalChart({ chart, variant = "dashboard", height = 34
           />
           <YAxis
             domain={[0, yMax]}
-            ticks={cfg.yTicks}
+            ticks={yTicks}
             tick={axisTick}
             tickLine={false}
             axisLine={false}
@@ -63,7 +75,7 @@ export default function ArrivalChart({ chart, variant = "dashboard", height = 34
             tickFormatter={(v) => v.toLocaleString("en-US")}
             label={
               cfg.yLabel
-                ? { value: "Fans / 15 min", angle: -90, position: "insideLeft", style: { fill: "var(--axis)", fontSize: 11, fontFamily: "var(--font-sans)", textAnchor: "middle" } }
+                ? { value: yAxisLabel, angle: -90, position: "insideLeft", style: { fill: "var(--axis)", fontSize: 11, fontFamily: "var(--font-sans)", textAnchor: "middle" } }
                 : undefined
             }
           />

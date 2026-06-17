@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { EVENTS, ORIGINS, TRANSPORTS, MAPS_URL } from "@/lib/data";
 import { computeWave, parseTime, formatTime } from "@/lib/waveLogic";
 import Reveal from "./Reveal";
@@ -55,6 +55,15 @@ export default function FanView({ events = EVENTS, onFanSubmit }) {
   const [time, setTime] = useState(null); // minutes from midnight
   const [openDD, setOpenDD] = useState(""); // 'event' | 'origin' | 'transport' | ''
   const [result, setResult] = useState(null);
+  const ddRef = useRef(null);
+
+  // Close any open dropdown when clicking outside the dropdown column.
+  useEffect(() => {
+    if (!openDD) return;
+    const onDown = (e) => { if (ddRef.current && !ddRef.current.contains(e.target)) setOpenDD(""); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openDD]);
 
   const EVENT = events.find((e) => e.id === selectedId) || events[0];
 
@@ -162,6 +171,7 @@ export default function FanView({ events = EVENTS, onFanSubmit }) {
           <h1 style={{ fontFamily: serif, fontWeight: 400, fontSize: "clamp(38px,6vw,58px)", letterSpacing: "-.5px", margin: "16px 0 4px", lineHeight: 1, color: "var(--text-bright)" }}>Find Your Wave</h1>
           <p style={{ margin: "0 0 24px", fontSize: 14.5, color: "var(--muted-2)" }}>{EVENT.label} · {EVENT.date} · {EVENT.kickoff}</p>
 
+          <div ref={ddRef}>
           {/* Event selector */}
           <div style={{ position: "relative", zIndex: openDD === "event" ? 40 : 5, marginBottom: 18 }}>
             <label style={labelStyle}>Which event are you attending?</label>
@@ -232,6 +242,7 @@ export default function FanView({ events = EVENTS, onFanSubmit }) {
                 ))}
               </div>
             )}
+          </div>
           </div>
 
           {/* Time grid */}

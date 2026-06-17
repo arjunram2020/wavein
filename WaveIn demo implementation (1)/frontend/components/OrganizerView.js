@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
 import { generateChart } from "@/lib/waveLogic";
@@ -232,6 +232,15 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const pickerRef = useRef(null);
+
+  // Close the event dropdown when clicking anywhere outside it.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDown = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen]);
 
   const ev = events.find((e) => e.id === selectedId) || events[0];
   const { counters, waveTable, chart } = ev;
@@ -259,7 +268,7 @@ export default function OrganizerView({ events = EVENTS, onCreateEvent }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* Event selector */}
-          <div style={{ position: "relative" }}>
+          <div ref={pickerRef} style={{ position: "relative" }}>
             <div onClick={() => setPickerOpen((o) => !o)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 16px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12, cursor: "pointer" }}>
               <StadiumIcon />
               <div style={{ textAlign: "left", lineHeight: 1.25, whiteSpace: "nowrap" }}>

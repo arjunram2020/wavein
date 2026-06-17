@@ -92,7 +92,65 @@ function CreateEventPanel({ onSave, onClose }) {
     width: "100%", padding: "11px 13px", borderRadius: 10, background: "rgba(255,255,255,.04)",
     border: "1px solid rgba(255,255,255,.12)", color: "var(--text)", fontFamily: "inherit", fontSize: 13.5, outline: "none", boxSizing: "border-box",
   };
+  // Native pickers return ISO-ish values; dark-mode them and keep the picker icon visible.
+  const pickerField = { ...field, colorScheme: "dark" };
   const lbl = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: ".6px", color: "var(--muted-2)", textTransform: "uppercase", marginBottom: 6 };
+
+  // ── value converters between native inputs and the app's display strings ──
+  // "16:30" (input type=time) → "4:30pm"
+  const time24to12 = (hhmm) => {
+    if (!hhmm) return "";
+    const [h, m] = hhmm.split(":").map(Number);
+    const ampm = h >= 12 ? "pm" : "am";
+    const dh = h % 12 === 0 ? 12 : h % 12;
+    return `${dh}:${String(m).padStart(2, "0")}${ampm}`;
+  };
+  // "4:30pm" → "16:30" (to repopulate a time input from stored display value)
+  const time12to24 = (str) => {
+    if (!str) return "";
+    const s = str.trim().toLowerCase();
+    const pm = s.includes("pm"), am = s.includes("am");
+    let [h, m] = s.replace("pm", "").replace("am", "").split(":").map(Number);
+    if (pm && h !== 12) h += 12;
+    if (am && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+  };
+  // "2026-09-13" (input type=date) → "Sep 13, 2026"
+  const isoToPretty = (iso) => {
+    if (!iso) return "";
+    const [y, mo, d] = iso.split("-").map(Number);
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${MONTHS[mo - 1]} ${d}, ${y}`;
+  };
+  // "Sep 13, 2026" → "2026-09-13"
+  const prettyToIso = (pretty) => {
+    if (!pretty) return "";
+    const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const m = pretty.toLowerCase().match(/([a-z]{3})\w*\s+(\d{1,2}),?\s+(\d{4})/);
+    if (!m) return "";
+    const mo = MONTHS.indexOf(m[1]) + 1;
+    if (!mo) return "";
+    return `${m[3]}-${String(mo).padStart(2, "0")}-${String(Number(m[2])).padStart(2, "0")}`;
+  };
+
+  // A wave window is stored as "4:30 – 5:15pm". Read/write each end as 24h "HH:MM"
+  // so it binds to an <input type="time">.
+  const windowPart = (windowStr, which) => {
+    const parts = (windowStr || "").split(" – ");
+    const raw = (which === "start" ? parts[0] : parts[1])?.trim();
+    if (!raw) return "";
+    // Start often omits am/pm — inherit it from the end.
+    if (which === "start" && !/am|pm/i.test(raw) && parts[1]) {
+      return time12to24(raw + (/pm/i.test(parts[1]) ? "pm" : "am"));
+    }
+    return time12to24(raw);
+  };
+  const setWindowPart = (i, which, hhmm) => {
+    const cur = waves[i].window || "";
+    const start24 = which === "start" ? hhmm : windowPart(cur, "start");
+    const end24 = which === "end" ? hhmm : windowPart(cur, "end");
+    setWave(i, "window", `${time24to12(start24)} – ${time24to12(end24)}`);
+  };
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", justifyContent: "flex-end", background: "rgba(0,0,0,.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
@@ -115,9 +173,9 @@ function CreateEventPanel({ onSave, onClose }) {
               </select>
             </div>
             <div><label style={lbl}>Emoji</label><input style={field} placeholder="⚽" value={details.emoji} onChange={(e) => setDetail("emoji", e.target.value)} /></div>
-            <div><label style={lbl}>Date</label><input style={field} placeholder="Sep 13, 2026" value={details.date} onChange={(e) => setDetail("date", e.target.value)} /></div>
-            <div><label style={lbl}>Doors open</label><input style={field} placeholder="4:30pm" value={details.doorsOpen} onChange={(e) => setDetail("doorsOpen", e.target.value)} /></div>
-            <div><label style={lbl}>Kickoff</label><input style={field} placeholder="7:00pm KO" value={details.kickoff} onChange={(e) => setDetail("kickoff", e.target.value)} /></div>
+            <div><label style={lbl}>Date</label><input type="date" style={pickerField} value={prettyToIso(details.date)} onChange={(e) => setDetail("date", isoToPretty(e.target.value))} /></div>
+            <div><label style={lbl}>Doors open</label><input type="time" style={pickerField} value={time12to24(details.doorsOpen)} onChange={(e) => setDetail("doorsOpen", time24to12(e.target.value))} /></div>
+            <div><label style={lbl}>Kickoff</label><input type="time" style={pickerField} value={time12to24(details.kickoff)} onChange={(e) => setDetail("kickoff", time24to12(e.target.value))} /></div>
             <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Attendance</label><input style={field} placeholder="72,000" value={details.totalFans} onChange={(e) => setDetail("totalFans", e.target.value)} /></div>
           </div>
 
@@ -135,7 +193,17 @@ function CreateEventPanel({ onSave, onClose }) {
                   )}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <input style={field} placeholder="Window — 4:30 – 5:15pm" value={w.window} onChange={(e) => setWave(i, "window", e.target.value)} />
+                  <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+                    <div>
+                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Window start</span>
+                      <input type="time" style={pickerField} value={windowPart(w.window, "start")} onChange={(e) => setWindowPart(i, "start", e.target.value)} />
+                    </div>
+                    <span style={{ color: "var(--muted-3)", paddingTop: 18 }}>–</span>
+                    <div>
+                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Window end</span>
+                      <input type="time" style={pickerField} value={windowPart(w.window, "end")} onChange={(e) => setWindowPart(i, "end", e.target.value)} />
+                    </div>
+                  </div>
                   <input style={field} placeholder="Zones — Airport, Downtown" value={w.zones} onChange={(e) => setWave(i, "zones", e.target.value)} />
                   <input style={field} placeholder="Transport — MARTA Priority" value={w.transport} onChange={(e) => setWave(i, "transport", e.target.value)} />
                   <input style={field} placeholder="Reward — Free drink" value={w.reward} onChange={(e) => setWave(i, "reward", e.target.value)} />

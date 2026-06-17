@@ -1,436 +1,205 @@
 "use client";
 import { useState } from "react";
+import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
-import { generateChart } from "@/lib/waveLogic";
-import { deriveCounters } from "@/lib/logistics";
+import Reveal from "./Reveal";
 import ArrivalChart from "./ArrivalChart";
 
-const card = {
-  background: "#111118", border: "1px solid #1e1e2e", borderRadius: 12,
-  padding: 20, boxShadow: "0 0 20px rgba(0,255,135,0.05)",
+const serif = "var(--font-serif)";
+
+// Design wave→color mapping (the lib data carries its own neon dot colors; the
+// redesign maps by wave index to the warm palette instead).
+const WAVE_COLORS = ["#5BD6A0", "#E8B45A", "#D99A4E", "#E2685B"];
+
+// Full-season projection + equivalencies (presentation constants).
+const SEASON = { co2: 408000, trees: 2190, cars: 89, flights: 51 };
+
+const panel = {
+  background: "linear-gradient(180deg,rgba(20,31,54,.6),rgba(13,19,31,.5))",
+  border: "1px solid rgba(255,255,255,.09)", borderRadius: 20,
 };
-const cardLabel = { fontSize: 11, fontWeight: 600, letterSpacing: "0.13em", color: "#8888aa" };
-const colHead = { fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", color: "#8888aa", padding: "0 8px 10px" };
-const input = {
-  width: "100%", background: "#0d0d14", border: "1px solid #1e1e2e", borderRadius: 8,
-  padding: "9px 12px", fontSize: 13, color: "#fff", outline: "none", boxSizing: "border-box",
-};
 
-const CATEGORIES_ORDER = ["WC26", "Falcons", "Atlanta United", "SEC Championship", "Concert", "Dragon Con"];
-const CATEGORY_EMOJIS = { "WC26": "⚽", "Falcons": "🏈", "Atlanta United": "⚽", "SEC Championship": "🏈", "Concert": "🎤", "Dragon Con": "🐉" };
-const W1 = "#00ff87", W2 = "#ffd23f", W3 = "#ff9500", W4 = "#ff4444";
-
-function StatCard({ label, icon, value, sub, valueColor, glow }) {
+function StatCard({ label, value, unit, sub, color, icon, bg, border }) {
   return (
-    <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <span style={cardLabel}>{label}</span>
-        <span style={{ fontSize: 20 }}>{icon}</span>
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 18, padding: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: "1.2px", color: "var(--muted-2)", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
+        {icon}
       </div>
-      <div style={{ fontSize: 38, fontWeight: 700, marginTop: 10, lineHeight: 1, color: valueColor || "#fff", textShadow: glow ? `0 0 12px ${glow}` : "none" }}>
-        {value}
+      <div style={{ marginTop: 14, lineHeight: 1 }}>
+        <span style={{ fontSize: "clamp(32px,3.4vw,44px)", fontWeight: 800, color, letterSpacing: "-1px" }}>{value}</span>
+        {unit && <span style={{ fontSize: 16, fontWeight: 700, color, marginLeft: 5 }}>{unit}</span>}
       </div>
-      <div style={{ fontSize: 12, color: "#8888aa", marginTop: 8 }}>{sub}</div>
+      <div style={{ fontSize: 12.5, color: "var(--muted-3)", marginTop: 8 }}>{sub}</div>
     </div>
   );
 }
 
-// Small mono "ƒ(x)" chip that shows how a metric is computed, under its value.
-function Formula({ color, children }) {
+function StadiumIcon({ stroke = "#E8B45A", size = 20 }) {
   return (
-    <div style={{
-      marginTop: 8, padding: "6px 9px", borderRadius: 6,
-      background: "rgba(255,255,255,0.03)", border: "1px solid #1e1e2e",
-      display: "flex", gap: 7, alignItems: "flex-start",
-    }}>
-      <span style={{ color, fontWeight: 700, fontStyle: "italic", fontSize: 12, lineHeight: 1.5, flex: "none" }}>ƒ</span>
-      <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 10.5, lineHeight: 1.5, color: "#9a9ab0" }}>
-        {children}
-      </span>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6">
+      <ellipse cx="12" cy="12" rx="9" ry="5" /><path d="M3 12c0 3 4 5 9 5s9-2 9-5" />
+    </svg>
   );
 }
 
-// ─── Event selector dropdown ──────────────────────────────────────────────────
-function EventSelector({ events, selected, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ev = events.find((e) => e.id === selected);
-  const categories = CATEGORIES_ORDER.filter((c) => events.some((e) => e.category === c));
-  events.forEach((e) => { if (!categories.includes(e.category)) categories.push(e.category); });
-
-  return (
-    <div style={{ position: "relative" }}>
-      <div
-        onClick={() => setOpen(!open)}
-        style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "9px 14px",
-          background: "#0d0d14", border: `1px solid ${open ? "#00ff87" : "#1e1e2e"}`,
-          borderRadius: 10, cursor: "pointer", transition: "border-color 0.15s", minWidth: 280,
-        }}
-      >
-        <span style={{ fontSize: 16 }}>{ev?.emoji}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{ev?.label}</div>
-          <div style={{ fontSize: 11, color: "#8888aa" }}>{ev?.date} · {ev?.kickoff}</div>
-        </div>
-        <span style={{ color: "#5a5a72", fontSize: 11 }}>▼</span>
-      </div>
-      {open && (
-        <div style={{
-          position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, minWidth: 320,
-          background: "#0d0d14", border: "1px solid #1e2e24", borderRadius: 12,
-          overflow: "hidden", boxShadow: "0 12px 40px rgba(0,0,0,0.7)", maxHeight: 380, overflowY: "auto",
-        }}>
-          {categories.map((cat) => (
-            <div key={cat}>
-              <div style={{ padding: "8px 14px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#5a5a72", textTransform: "uppercase", background: "#0a0a12" }}>
-                {cat}
-              </div>
-              {events.filter((e) => e.category === cat).map((e) => (
-                <div
-                  key={e.id}
-                  onClick={() => { onChange(e.id); setOpen(false); }}
-                  style={{ padding: "9px 14px", cursor: "pointer", borderTop: "1px solid #15151f", display: "flex", alignItems: "center", gap: 10 }}
-                  onMouseEnter={(el) => { el.currentTarget.style.background = "rgba(0,255,135,0.07)"; }}
-                  onMouseLeave={(el) => { el.currentTarget.style.background = "transparent"; }}
-                >
-                  <span style={{ fontSize: 15 }}>{e.emoji}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: e.id === selected ? 700 : 400, color: e.id === selected ? "#00ff87" : "#e6e6f0" }}>{e.label}</div>
-                    <div style={{ fontSize: 11, color: "#5a5a72" }}>{e.date} · {e.kickoff}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Create Event slide-over ──────────────────────────────────────────────────
-const BLANK_WAVE = (n, dot) => ({
-  name: `Wave ${n}`, dot,
-  window: "", zones: "", transport: "", reward: "", fans: "",
-});
-
-function CreateEventPanel({ onSave, onClose }) {
-  const [details, setDetails] = useState({
-    label: "", category: "WC26", emoji: "⚽", date: "", kickoff: "", totalFans: "",
-  });
-  const [waves, setWaves] = useState([
-    BLANK_WAVE(1, W1), BLANK_WAVE(2, W2), BLANK_WAVE(3, W3), BLANK_WAVE(4, W4),
-  ]);
-  const [error, setError] = useState("");
-
-  const setDetail = (k, v) => setDetails((d) => ({ ...d, [k]: v }));
-  const setWave = (i, k, v) => setWaves((ws) => ws.map((w, idx) => idx === i ? { ...w, [k]: v } : w));
-
-  const handleSave = () => {
-    if (!details.label || !details.date || !details.kickoff || !details.totalFans) {
-      setError("Please fill in all event details."); return;
-    }
-    if (waves.some((w) => !w.window || !w.zones)) {
-      setError("Each wave needs at least a time window and zones."); return;
-    }
-    const fans = parseInt(details.totalFans.replace(/,/g, ""), 10);
-    const id = `custom-${Date.now()}`;
-    onSave({
-      id,
-      category: details.category,
-      emoji: details.emoji || CATEGORY_EMOJIS[details.category] || "📅",
-      label: details.label,
-      date: details.date,
-      kickoff: details.kickoff,
-      totalFans: fans.toLocaleString(),
-      // Counters are derived from the wave table itself — per-wave fan counts,
-      // transport modes, and real zone→stadium distances — not from attendance
-      // multipliers. See lib/logistics.js.
-      counters: deriveCounters(waves),
-      waveTable: waves,
-      chart: generateChart(details.kickoff, fans),
-    });
-    onClose();
-  };
-
-  const fieldStyle = { ...input, marginTop: 6 };
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 100, display: "flex", justifyContent: "flex-end",
-      background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
-    }}>
-      <div style={{
-        width: "min(600px, 100vw)", height: "100vh", background: "#0e0e16",
-        borderLeft: "1px solid #1e2e24", overflowY: "auto", display: "flex", flexDirection: "column",
-        animation: "wiSlideRight 0.3s ease",
-      }}>
-        {/* Header */}
-        <div style={{ padding: "22px 28px 18px", borderBottom: "1px solid #1e1e2e", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#0e0e16", zIndex: 10 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: "#00ff87", marginBottom: 4 }}>NEW EVENT</div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Create Event</h2>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#8888aa", fontSize: 22, cursor: "pointer", padding: 4 }}>✕</button>
-        </div>
-
-        <div style={{ padding: "24px 28px", flex: 1 }}>
-          {/* ── Event details ── */}
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#8888aa", textTransform: "uppercase", marginBottom: 14 }}>Event Details</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Event Name *</label>
-              <input style={fieldStyle} placeholder="e.g. Falcons vs Cowboys" value={details.label} onChange={(e) => setDetail("label", e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Category *</label>
-              <select
-                style={{ ...fieldStyle, appearance: "none" }}
-                value={details.category}
-                onChange={(e) => {
-                  setDetail("category", e.target.value);
-                  setDetail("emoji", CATEGORY_EMOJIS[e.target.value] || "📅");
-                }}
-              >
-                {CATEGORIES_ORDER.map((c) => <option key={c} value={c}>{c}</option>)}
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Emoji</label>
-              <input style={fieldStyle} placeholder="⚽" value={details.emoji} onChange={(e) => setDetail("emoji", e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Date *</label>
-              <input style={fieldStyle} placeholder="Sep 13, 2026" value={details.date} onChange={(e) => setDetail("date", e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Kickoff / Show Time *</label>
-              <input style={fieldStyle} placeholder="7:00pm KO" value={details.kickoff} onChange={(e) => setDetail("kickoff", e.target.value)} />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 12, color: "#8888aa" }}>Expected Attendance *</label>
-              <input style={fieldStyle} placeholder="72,000" value={details.totalFans} onChange={(e) => setDetail("totalFans", e.target.value)} />
-            </div>
-          </div>
-
-          {/* ── Wave table ── */}
-          <div style={{ borderTop: "1px solid #1e1e2e", margin: "28px 0 18px" }} />
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#8888aa", textTransform: "uppercase", marginBottom: 4 }}>Wave Configuration</div>
-          <div style={{ fontSize: 12, color: "#5a5a72", marginBottom: 16 }}>Set the arrival window, zones, transport type, and reward for each wave.</div>
-
-          {waves.map((w, i) => (
-            <div key={i} style={{ marginBottom: 20, padding: 16, background: "#111118", borderRadius: 10, borderLeft: `3px solid ${w.dot}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 12, height: 12, borderRadius: "50%", background: w.dot, boxShadow: `0 0 6px ${w.dot}99`, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{w.name}</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, color: "#8888aa" }}>Time Window *</label>
-                  <input style={fieldStyle} placeholder="4:30 – 5:15pm" value={w.window} onChange={(e) => setWave(i, "window", e.target.value)} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: "#8888aa" }}>Zones *</label>
-                  <input style={fieldStyle} placeholder="Airport, Downtown" value={w.zones} onChange={(e) => setWave(i, "zones", e.target.value)} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: "#8888aa" }}>Transport Mode</label>
-                  <input style={fieldStyle} placeholder="MARTA Priority" value={w.transport} onChange={(e) => setWave(i, "transport", e.target.value)} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: "#8888aa" }}>Reward</label>
-                  <input style={fieldStyle} placeholder="Free drink + Priority Gate" value={w.reward} onChange={(e) => setWave(i, "reward", e.target.value)} />
-                </div>
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={{ fontSize: 11, color: "#8888aa" }}>Estimated Fans</label>
-                  <input style={fieldStyle} placeholder="5,200" value={w.fans} onChange={(e) => setWave(i, "fans", e.target.value)} />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {error && <div style={{ fontSize: 13, color: "#ff4444", marginBottom: 12 }}>{error}</div>}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: "18px 28px", borderTop: "1px solid #1e1e2e", display: "flex", gap: 12, position: "sticky", bottom: 0, background: "#0e0e16" }}>
-          <button
-            onClick={onClose}
-            style={{ flex: 1, padding: 13, background: "none", border: "1px solid #1e1e2e", borderRadius: 10, color: "#8888aa", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            style={{ flex: 2, padding: 13, background: "#00ff87", border: "none", borderRadius: 10, color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 0 18px rgba(0,255,135,0.35)" }}
-          >
-            Create Event →
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main view ────────────────────────────────────────────────────────────────
-export default function OrganizerView({ events, onCreateEvent }) {
+export default function OrganizerView({ events = EVENTS }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
-  const [showCreate, setShowCreate] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const ev = events.find((e) => e.id === selectedId) || events[0];
   const { counters, waveTable, chart } = ev;
 
-  const co2 = useCountUp(counters.co2Target, 20000, { min: 2, max: 8, minMs: 2000, maxMs: 3000 });
-  const marta = useCountUp(counters.martaTarget, 25000, { min: 1, max: 1, minMs: 4000, maxMs: 6000 });
-  const co2Pct = Math.min((co2 / counters.co2Ceiling) * 100, 100).toFixed(1) + "%";
-  const martaPct = Math.min((marta / counters.martaCeiling) * 100, 100).toFixed(1) + "%";
+  // Live CO₂ counter (lib hook) shared by the stat card and the panel.
+  const co2 = useCountUp(counters.co2Target, 1800, { min: 2, max: 8, minMs: 2200, maxMs: 3200 });
+  const co2Pct = Math.min((co2 / counters.co2Ceiling) * 100, 100);
+  const martaPct = Math.min((counters.martaTarget / counters.martaCeiling) * 100, 100);
+  const shortDate = ev.date.replace(/,\s*\d{4}$/, "");
 
   return (
-    <div style={{ maxWidth: 1320, margin: "0 auto", padding: "28px 28px 56px" }}>
-      {showCreate && (
-        <CreateEventPanel
-          onSave={(newEv) => { onCreateEvent(newEv); setSelectedId(newEv.id); }}
-          onClose={() => setShowCreate(false)}
-        />
-      )}
-
+    <div style={{ position: "relative", zIndex: 1, maxWidth: 1340, margin: "0 auto", padding: "clamp(24px,3.5vw,44px) clamp(18px,3vw,40px) 80px" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: 34, fontWeight: 700 }}>Event Command Center</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <EventSelector events={events} selected={selectedId} onChange={setSelectedId} />
-          <button
-            onClick={() => setShowCreate(true)}
-            style={{
-              padding: "9px 16px", background: "rgba(0,255,135,0.1)", border: "1px solid rgba(0,255,135,0.35)",
-              borderRadius: 10, color: "#00ff87", fontSize: 13, fontWeight: 700, cursor: "pointer",
-              whiteSpace: "nowrap", transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,255,135,0.18)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,255,135,0.1)"; }}
-          >
-            + New Event
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", border: "1px solid #1e1e2e", borderRadius: 999, background: "#111118" }}>
-            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#00ff87", boxShadow: "0 0 10px rgba(0,255,135,0.8)", animation: "wiBlink 1.6s ease-in-out infinite" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.14em", color: "#00ff87" }}>LIVE</span>
-          </div>
+      <Reveal style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 18, marginBottom: 30 }}>
+        <div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: "1.8px", color: "var(--gold)", textTransform: "uppercase" }}>Organizer · Live</div>
+          <h1 style={{ fontFamily: serif, fontWeight: 400, fontSize: "clamp(34px,4.4vw,56px)", letterSpacing: "-.4px", margin: "6px 0 0", color: "var(--text-bright)" }}>Event Command Center</h1>
         </div>
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Event selector */}
+          <div style={{ position: "relative" }}>
+            <div onClick={() => setPickerOpen((o) => !o)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 16px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12, cursor: "pointer" }}>
+              <StadiumIcon />
+              <div style={{ textAlign: "left", lineHeight: 1.25, whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{ev.label}</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted-3)" }}>{ev.date} · {ev.kickoff}</div>
+              </div>
+              <span style={{ color: "var(--muted-3)", fontSize: 12, marginLeft: 4 }}>▾</span>
+            </div>
+            {pickerOpen && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, minWidth: 260, background: "#1A2840", border: "1px solid rgba(255,255,255,.14)", borderRadius: 13, padding: 6, boxShadow: "0 24px 60px rgba(0,0,0,.6)", zIndex: 30, maxHeight: 320, overflow: "auto", animation: "modalIn .22s ease" }}>
+                {events.map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => { setSelectedId(e.id); setPickerOpen(false); }}
+                    style={{ width: "100%", textAlign: "left", padding: "10px 13px", borderRadius: 9, background: e.id === selectedId ? "rgba(232,180,90,.14)" : "none", border: "none", cursor: "pointer", fontFamily: "inherit", color: "var(--text)", display: "flex", alignItems: "center", gap: 9 }}
+                  >
+                    <span style={{ fontSize: 15 }}>{e.emoji}</span>
+                    <span>
+                      <span style={{ display: "block", fontSize: 13.5, fontWeight: 600 }}>{e.label}</span>
+                      <span style={{ display: "block", fontSize: 11.5, color: "var(--muted-3)" }}>{e.date} · {e.kickoff}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button style={{ padding: "11px 18px", borderRadius: 12, border: "1px solid rgba(232,180,90,.45)", background: "rgba(232,180,90,.1)", color: "var(--gold)", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ New Event</button>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 12, background: "rgba(91,214,160,.12)", border: "1px solid rgba(91,214,160,.3)", color: "var(--green)", fontSize: 13, fontWeight: 700, letterSpacing: ".5px" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 10px #5BD6A0", animation: "twinkle 1.6s ease-in-out infinite" }} />LIVE
+          </span>
+        </div>
+      </Reveal>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 18 }}>
-        <StatCard label="TOTAL FANS" icon="👥" value={ev.totalFans} sub={`${ev.label} · ${ev.date}`} />
-        <StatCard label="ACTIVE WAVES" icon="🌊" value="4" sub="Waves 1–4 operational" />
-        <StatCard label="CO₂ SAVED" icon="🌱" value={fmt(co2)} sub="kg this event" valueColor="#00ff87" glow="rgba(0,255,135,0.6)" />
-        <StatCard label="CAR → MARTA SHIFTS" icon="🚇" value={fmt(marta)} sub="fans rerouted to transit" valueColor="#00c4ff" glow="rgba(0,196,255,0.5)" />
-      </div>
+      <Reveal delay={0.06} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 18 }}>
+        <StatCard
+          label="Total Fans" value={ev.totalFans} sub={`${ev.label} · ${shortDate}`} color="var(--text)"
+          bg="linear-gradient(165deg,rgba(232,180,90,.1),rgba(20,30,50,.5))" border="rgba(232,180,90,.18)"
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" strokeWidth="1.5"><circle cx="9" cy="8" r="3" /><path d="M3 20c0-3 3-5 6-5s6 2 6 5" /><path d="M16 6a3 3 0 0 1 0 6M21 20c0-2.5-1.5-4.3-4-4.8" /></svg>}
+        />
+        <StatCard
+          label="Active Waves" value={String(waveTable.length)} sub={`Waves 1–${waveTable.length} operational`} color="var(--gold)"
+          bg="linear-gradient(165deg,rgba(255,255,255,.05),rgba(20,30,50,.5))" border="rgba(255,255,255,.1)"
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FA8D8" strokeWidth="1.5"><path d="M3 12c3-5 6-5 9 0s6 5 9 0" /><path d="M3 17c3-5 6-5 9 0s6 5 9 0" opacity=".5" /></svg>}
+        />
+        <StatCard
+          label="CO₂ Saved" value={fmt(co2)} unit="kg" sub="this event" color="var(--green)"
+          bg="linear-gradient(165deg,rgba(91,214,160,.1),rgba(20,30,50,.5))" border="rgba(91,214,160,.2)"
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5BD6A0" strokeWidth="1.5"><path d="M11 20A7 7 0 0 1 9.8 6.1C15 5 17 4 19 2c1 2 1 6-1 9a7 7 0 0 1-7 9Z" /><path d="M11 20c0-4 2-7 5-9" /></svg>}
+        />
+        <StatCard
+          label="Car → MARTA" value={fmt(counters.martaTarget)} sub="fans rerouted to transit" color="var(--blue)"
+          bg="linear-gradient(165deg,rgba(82,140,210,.1),rgba(20,30,50,.5))" border="rgba(82,140,210,.2)"
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6FA0E0" strokeWidth="1.5"><rect x="4" y="5" width="16" height="11" rx="2" /><path d="M4 11h16M8 20l1-4M16 20l-1-4" /></svg>}
+        />
+      </Reveal>
 
       {/* Chart */}
-      <div style={{ ...card, padding: "22px 22px 14px", marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
-            Arrival Distribution — {ev.label}, {ev.date} · {ev.kickoff}
-          </h2>
-          <div style={{ display: "flex", gap: 18 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#8888aa" }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: "#ff4444", display: "inline-block" }} />
-              Without WaveIn
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#8888aa" }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: "#00ff87", display: "inline-block" }} />
-              With WaveIn
-            </span>
+      <Reveal delay={0.1} style={{ ...panel, padding: "24px clamp(16px,2.5vw,30px)", marginBottom: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 8 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--text)" }}>
+            Arrival Distribution <span style={{ color: "var(--muted-3)", fontWeight: 500 }}>— {ev.label}, {shortDate} · {ev.kickoff}</span>
+          </h3>
+          <div style={{ display: "flex", gap: 18, fontSize: 13, fontWeight: 600 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--red)" }}><span style={{ width: 14, height: 3, borderRadius: 2, background: "var(--red)" }} />Without WaveIn</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--green)" }}><span style={{ width: 14, height: 3, borderRadius: 2, background: "var(--green)" }} />With WaveIn</span>
           </div>
         </div>
-        <ArrivalChart chart={chart} />
-      </div>
+        <ArrivalChart chart={chart} variant="dashboard" height={360} />
+      </Reveal>
 
-      {/* Wave table + sustainability */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 18, alignItems: "start" }}>
-        <div style={{ ...card, overflow: "hidden" }}>
-          <h2 style={{ margin: "0 0 14px", fontSize: 17, fontWeight: 600 }}>Wave Assignments — Active</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.2fr 1.5fr 1.4fr 1.7fr 0.8fr", fontSize: 13 }}>
-            <div style={colHead}>WAVE</div>
-            <div style={colHead}>WINDOW</div>
-            <div style={colHead}>ZONES</div>
-            <div style={colHead}>TRANSPORT</div>
-            <div style={colHead}>REWARD</div>
-            <div style={{ ...colHead, textAlign: "right" }}>FANS</div>
-
-            {waveTable.map((w, i) => {
-              const rowBg = i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)";
-              const cellBase = { padding: "13px 8px", borderTop: "1px solid #1e1e2e", background: rowBg, color: "#c9c9d8", display: "flex", alignItems: "center" };
-              return (
-                <div key={w.name} style={{ display: "contents" }}>
-                  <div style={{ ...cellBase, color: "#fff" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ width: 14, height: 14, borderRadius: "50%", flex: "none", background: w.dot, boxShadow: `0 0 8px ${w.dot}99` }} />
-                      <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{w.name}</span>
-                    </span>
-                  </div>
-                  <div style={cellBase}>{w.window}</div>
-                  <div style={cellBase}>{w.zones}</div>
-                  <div style={cellBase}>{w.transport}</div>
-                  <div style={cellBase}>{w.reward}</div>
-                  <div style={{ ...cellBase, justifyContent: "flex-end", fontWeight: 600, color: "#fff" }}>{w.fans}</div>
-                </div>
-              );
-            })}
+      {/* Bottom: table + sustainability */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 18 }}>
+        <Reveal style={{ ...panel, padding: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 18px", color: "var(--text)" }}>Wave Assignments <span style={{ color: "var(--green)", fontWeight: 600 }}>— Active</span></h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.1fr 1.2fr 1.4fr .7fr", gap: 10, fontSize: 10.5, fontWeight: 700, letterSpacing: "1px", color: "var(--muted-4)", textTransform: "uppercase", padding: "0 4px 12px", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
+            <span>Wave</span><span>Window</span><span>Zones</span><span>Reward</span><span style={{ textAlign: "right" }}>Fans</span>
           </div>
-        </div>
+          {waveTable.map((w, i) => {
+            const color = WAVE_COLORS[i] || WAVE_COLORS[WAVE_COLORS.length - 1];
+            const last = i === waveTable.length - 1;
+            return (
+              <div key={w.name} style={{ display: "grid", gridTemplateColumns: "1.1fr 1.1fr 1.2fr 1.4fr .7fr", gap: 10, alignItems: "center", padding: "16px 4px", borderBottom: last ? "none" : "1px solid rgba(255,255,255,.05)", fontSize: 13 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: "var(--text)" }}>
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}99` }} />{w.name}
+                </span>
+                <span style={{ color: "var(--muted-1)" }}>{w.window}</span>
+                <span style={{ color: "var(--muted-2)" }}>{w.zones}</span>
+                <span style={{ color: "var(--muted-1)" }}>{w.reward}</span>
+                <span style={{ textAlign: "right", fontWeight: 700, color: "var(--text)" }}>{w.fans}</span>
+              </div>
+            );
+          })}
+        </Reveal>
 
-        <div style={{ ...card, borderLeft: "4px solid #00ff87", boxShadow: "0 0 20px rgba(0,255,135,0.06)" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: "#00ff87", textShadow: "0 0 10px rgba(0,255,135,0.4)", marginBottom: 18 }}>
-            🌱 SUSTAINABILITY IMPACT
+        <Reveal delay={0.08} style={{ background: "linear-gradient(180deg,rgba(91,214,160,.08),rgba(13,22,30,.5))", border: "1px solid rgba(91,214,160,.2)", borderRadius: 20, padding: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 18 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5BD6A0" strokeWidth="1.7"><path d="M11 20A7 7 0 0 1 9.8 6.1C15 5 17 4 19 2c1 2 1 6-1 9a7 7 0 0 1-7 9Z" /></svg>
+            <h3 style={{ fontSize: 13, fontWeight: 700, letterSpacing: "1px", color: "var(--green)", textTransform: "uppercase", margin: 0 }}>Sustainability Impact</h3>
           </div>
 
-          <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#8888aa", textTransform: "uppercase" }}>CO₂ Saved This Event</div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: "#00ff87", textShadow: "0 0 12px rgba(0,255,135,0.6)", margin: "2px 0 8px" }}>
-            {fmt(co2)} <span style={{ fontSize: 15, color: "#8888aa", textShadow: "none", fontWeight: 500 }}>kg</span>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>CO₂ saved this event</div>
+          <div style={{ margin: "6px 0 12px", lineHeight: 1 }}>
+            <span style={{ fontFamily: serif, fontSize: 48, color: "var(--green)" }}>{fmt(co2)}</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: "var(--green)", marginLeft: 6 }}>kg</span>
           </div>
-          <div style={{ height: 7, borderRadius: 4, background: "#1e1e2e", overflow: "hidden" }}>
-            <div style={{ height: "100%", background: "#00ff87", boxShadow: "0 0 10px rgba(0,255,135,0.6)", transition: "width 0.6s ease", width: co2Pct }} />
-          </div>
-          <Formula color="#00ff87">
-            Σ (MARTA-wave fans × round-trip × zone distance km × 0.21 kg/km ÷ 2.0 per car)
-          </Formula>
-
-          <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#8888aa", textTransform: "uppercase", marginTop: 18 }}>Car → MARTA Shifts</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#00c4ff", textShadow: "0 0 10px rgba(0,196,255,0.5)", margin: "2px 0 8px" }}>
-            {fmt(marta)} <span style={{ fontSize: 13, color: "#8888aa", textShadow: "none", fontWeight: 500 }}>fans</span>
-          </div>
-          <div style={{ height: 5, borderRadius: 4, background: "#1e1e2e", overflow: "hidden" }}>
-            <div style={{ height: "100%", background: "#00c4ff", boxShadow: "0 0 8px rgba(0,196,255,0.5)", transition: "width 0.6s ease", width: martaPct }} />
-          </div>
-          <Formula color="#00c4ff">
-            Σ fans in MARTA-mode waves &nbsp;·&nbsp; vs. ceiling = all fans within MARTA rail range (≤ 23 km)
-          </Formula>
-
-          <div style={{ borderTop: "1px dashed #1e1e2e", margin: "20px 0" }} />
-
-          <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#8888aa", textTransform: "uppercase" }}>Projected: Full Season</div>
-          <div style={{ fontSize: 20, fontWeight: 700, margin: "3px 0 14px" }}>
-            408,000 kg <span style={{ fontSize: 13, color: "#8888aa", fontWeight: 500 }}>CO₂ eliminated</span>
+          <div style={{ height: 8, borderRadius: 5, background: "rgba(255,255,255,.06)", overflow: "hidden", marginBottom: 22 }}>
+            <div style={{ height: "100%", width: `${co2Pct}%`, borderRadius: 5, background: "linear-gradient(90deg,#46C08A,#5BD6A0)", transition: "width .6s ease" }} />
           </div>
 
-          <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 8 }}>Equivalent to:</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}><span style={{ fontSize: 17 }}>🌳</span><span><strong style={{ color: "#fff" }}>2,190</strong> trees planted</span></div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}><span style={{ fontSize: 17 }}>🚗</span><span><strong style={{ color: "#fff" }}>89</strong> cars removed for a year</span></div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}><span style={{ fontSize: 17 }}>✈️</span><span><strong style={{ color: "#fff" }}>51</strong> transatlantic flights offset</span></div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Car → MARTA shifts</div>
+          <div style={{ margin: "6px 0 12px", lineHeight: 1 }}>
+            <span style={{ fontFamily: serif, fontSize: 36, color: "var(--blue)" }}>{fmt(counters.martaTarget)}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", marginLeft: 6 }}>fans</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 5, background: "rgba(255,255,255,.06)", overflow: "hidden", marginBottom: 24 }}>
+            <div style={{ height: "100%", width: `${martaPct}%`, borderRadius: 5, background: "linear-gradient(90deg,#4A78C0,#6FA0E0)", transition: "width .6s ease" }} />
           </div>
 
-          <div style={{ borderTop: "1px dashed #1e1e2e", margin: "18px 0 12px" }} />
-          <div style={{ fontSize: 11, lineHeight: 1.6, color: "#5a5a72" }}>
-            Methodology: counters derived from each wave&apos;s fan count, transport mode, and real
-            driving distance to Mercedes-Benz Stadium (Google Maps). Emissions: EPA avg car 0.21 kg CO₂/km ·
-            round trip · 2.0 occupancy.
+          <div style={{ paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.09)", fontSize: 11, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Projected: full season</div>
+          <div style={{ margin: "6px 0 16px" }}>
+            <span style={{ fontFamily: serif, fontSize: 32, color: "var(--text)" }}>{SEASON.co2.toLocaleString("en-US")} kg</span>{" "}
+            <span style={{ fontSize: 14, color: "var(--green-soft)" }}>CO₂ eliminated</span>
           </div>
-        </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🌳</span><strong style={{ color: "var(--text)" }}>{SEASON.trees.toLocaleString("en-US")}</strong> trees planted</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>🚗</span><strong style={{ color: "var(--text)" }}>{SEASON.cars}</strong> cars removed for a year</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "var(--muted-1)" }}><span style={{ fontSize: 19 }}>✈️</span><strong style={{ color: "var(--text)" }}>{SEASON.flights}</strong> transatlantic flights offset</div>
+          </div>
+          <p style={{ margin: "20px 0 0", fontSize: 11, lineHeight: 1.5, color: "var(--muted-4)" }}>
+            Methodology: counters derived from each wave&apos;s fan count, transport mode, and driving distance to Mercedes-Benz Stadium. EPA avg 0.21 kg CO₂/km · round trip · 2.0 occupancy.
+          </p>
+        </Reveal>
       </div>
     </div>
   );

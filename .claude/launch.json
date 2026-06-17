@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wavein",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "WaveIn demo implementation (1)/frontend", "run", "dev", "--", "-p", "3737"],
+      "port": 3737
+    }
+  ]
+}

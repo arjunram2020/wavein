@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#0B121F;}
+  body{font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(232,180,90,.3);}
+  @keyframes drift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(6vw,4vh) scale(1.15);}}
+  @keyframes drift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-5vw,6vh) scale(1.2);}}
+  @keyframes drift3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(4vw,-5vh) scale(1.1);}}
+  @keyframes twinkle{0%,100%{opacity:.25;}50%{opacity:.9;}}
+  @keyframes pulseRing{0%,100%{opacity:.55;transform:scale(1);}50%{opacity:.95;transform:scale(1.04);}}
+  @keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  @keyframes dashMove{to{stroke-dashoffset:-16;}}
+  @keyframes modalIn{from{opacity:0;transform:translateY(18px) scale(.97);}to{opacity:1;transform:none;}}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  @keyframes resultPop{0%{opacity:0;transform:translateY(26px) scale(.94);}60%{transform:translateY(-4px) scale(1.01);}100%{opacity:1;transform:none;}}
+  @keyframes badgeShine{0%{background-position:-160% 0;}100%{background-position:260% 0;}}
+  @keyframes confettiFall{0%{transform:translateY(-30px) rotate(0);opacity:0;}10%{opacity:1;}100%{transform:translateY(420px) rotate(420deg);opacity:0;}}
+  @keyframes revealIn{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+  [data-reveal][data-revealed]{animation:revealIn .85s cubic-bezier(.16,1,.3,1) both;}
+  @media (prefers-reduced-motion: reduce){ [data-reveal]{opacity:1!important;transform:none!important;animation:none!important;} *{animation-duration:.001s!important;} }
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="position:relative;min-height:100vh;background:#0B121F;color:#F4EDE0;font-family:'Hanken Grotesk',sans-serif;overflow-x:hidden;">
+
+  <div style="position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;">
+    <div style="position:absolute;width:62vw;height:62vw;left:-12vw;top:-14vh;background:radial-gradient(circle,rgba(232,180,90,.16),transparent 62%);filter:blur(36px);animation:drift1 24s ease-in-out infinite;"></div>
+    <div style="position:absolute;width:58vw;height:58vw;right:-16vw;top:18vh;background:radial-gradient(circle,rgba(52,116,196,.20),transparent 62%);filter:blur(46px);animation:drift2 30s ease-in-out infinite;"></div>
+    <div style="position:absolute;width:52vw;height:52vw;left:24vw;bottom:-24vh;background:radial-gradient(circle,rgba(91,214,160,.12),transparent 62%);filter:blur(48px);animation:drift3 34s ease-in-out infinite;"></div>
+  </div>
+
+  <nav style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:16px clamp(20px,4vw,44px);background:rgba(11,18,31,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.07);">
+    <button onClick="{{ goHome }}" style="display:flex;align-items:center;gap:11px;background:none;border:none;cursor:pointer;padding:0;">
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" style="display:block;">
+        <rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="url(#lg1)" stroke="rgba(232,180,90,.35)"></rect>
+        <path d="M6 25 C 11 16, 16 16, 20 22 C 24 28, 29 28, 34 19" stroke="#F4EDE0" stroke-width="2.6" stroke-linecap="round" fill="none" opacity=".92"></path>
+        <path d="M6 31 C 11 23, 16 23, 20 28 C 23 31.5, 27 32, 31 28" stroke="#E8B45A" stroke-width="2.4" stroke-linecap="round" fill="none"></path>
+        <circle cx="34" cy="19" r="2.7" fill="#E8B45A"></circle>
+        <defs><linearGradient id="lg1" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#244A86"></stop><stop offset="1" stop-color="#10213F"></stop></linearGradient></defs>
+      </svg>
+      <span style="font-size:21px;font-weight:700;letter-spacing:-.4px;color:#F4EDE0;">Wave<span style="color:#E8B45A;">In</span></span>
+    </button>
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:4px;">
+      <button onClick="{{ goDash }}" style="{{ navOrgStyle }}">Organizer View</button>
+      <button onClick="{{ goFan }}" style="{{ navFanStyle }}">Fan View</button>
+    </div>
+  </nav>
+
+  <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+  <div style="position:relative;z-index:1;">
+
+    <!-- HERO -->
+    <section style="max-width:1180px;margin:0 auto;padding:clamp(40px,6vw,84px) clamp(20px,4vw,40px) 30px;text-align:center;">
+      <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:9px;padding:7px 15px;border:1px solid rgba(232,180,90,.32);border-radius:999px;background:rgba(232,180,90,.07);font-size:12.5px;font-weight:600;letter-spacing:1.6px;color:#E8B45A;text-transform:uppercase;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#E8B45A;box-shadow:0 0 10px #E8B45A;"></span>FIFA World Cup 26 · Mercedes-Benz Stadium
+      </div>
+      <h1 data-reveal style="opacity:0;transform:translateY(30px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .08s,transform 1s cubic-bezier(.16,1,.3,1) .08s;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(42px,7.4vw,90px);line-height:1.0;letter-spacing:-.5px;margin:26px auto 0;max-width:14ch;color:#F7F1E6;">Every fan has the same target.<br><span style="font-style:italic;color:#E8B45A;">We give them a better one.</span></h1>
+      <p data-reveal style="opacity:0;transform:translateY(24px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .16s,transform 1s cubic-bezier(.16,1,.3,1) .16s;max-width:56ch;margin:24px auto 0;font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:#A9B5C8;">WaveIn gives every fan a personalized arrival window — easing the crush at kickoff, cutting idling emissions, and rewarding the ones who come early and ride transit.</p>
+      <div data-reveal style="opacity:0;transform:translateY(22px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .24s,transform 1s cubic-bezier(.16,1,.3,1) .24s;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px;">
+        <button onClick="{{ openOrg }}" style="display:inline-flex;align-items:center;gap:8px;padding:15px 28px;border-radius:13px;border:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;color:#1A1206;background:linear-gradient(180deg,#F0C572,#E0A24A);box-shadow:0 10px 28px rgba(224,162,74,.32);">I'm an Organizer<span style="font-size:18px;">→</span></button>
+        <button onClick="{{ openFan }}" style="display:inline-flex;align-items:center;gap:8px;padding:15px 28px;border-radius:13px;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;color:#F4EDE0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);">I'm a Fan<span style="font-size:18px;">→</span></button>
+      </div>
+
+      <div data-reveal style="opacity:0;transform:translateY(40px) scale(.98);transition:opacity 1.1s cubic-bezier(.16,1,.3,1) .3s,transform 1.1s cubic-bezier(.16,1,.3,1) .3s;margin-top:54px;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.09);box-shadow:0 40px 100px rgba(0,0,0,.55);">
+        <svg viewBox="0 0 1200 620" width="100%" style="display:block;">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0B1322"></stop><stop offset="0.42" stop-color="#22304F"></stop>
+              <stop offset="0.68" stop-color="#5B4A66"></stop><stop offset="0.85" stop-color="#C76C44"></stop>
+              <stop offset="1" stop-color="#EBA257"></stop>
+            </linearGradient>
+            <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFD89A" stop-opacity="0.95"></stop><stop offset="0.5" stop-color="#F0A85C" stop-opacity="0.45"></stop><stop offset="1" stop-color="#F0A85C" stop-opacity="0"></stop></radialGradient>
+            <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1A2236"></stop><stop offset="1" stop-color="#070B14"></stop></linearGradient>
+            <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFE7B0" stop-opacity="0.9"></stop><stop offset="1" stop-color="#FFE7B0" stop-opacity="0"></stop></radialGradient>
+            <linearGradient id="domeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B3A5C"></stop><stop offset="1" stop-color="#141E33"></stop></linearGradient>
+            <radialGradient id="vig" cx="0.5" cy="0.42" r="0.75"><stop offset="0.55" stop-color="#000000" stop-opacity="0"></stop><stop offset="1" stop-color="#000000" stop-opacity="0.55"></stop></radialGradient>
+          </defs>
+          <rect width="1200" height="620" fill="url(#sky)"></rect>
+          <ellipse cx="600" cy="430" rx="520" ry="240" fill="url(#sun)"></ellipse>
+          <circle cx="220" cy="90" r="1.6" fill="#fff" opacity=".7" style="animation:twinkle 4s ease-in-out infinite;"></circle>
+          <circle cx="360" cy="140" r="1.3" fill="#fff" opacity=".5" style="animation:twinkle 5s ease-in-out infinite .6s;"></circle>
+          <circle cx="900" cy="80" r="1.5" fill="#fff" opacity=".6" style="animation:twinkle 4.5s ease-in-out infinite 1s;"></circle>
+          <circle cx="1040" cy="150" r="1.2" fill="#fff" opacity=".5" style="animation:twinkle 6s ease-in-out infinite .3s;"></circle>
+          <circle cx="120" cy="180" r="1.3" fill="#fff" opacity=".45" style="animation:twinkle 5.5s ease-in-out infinite 1.4s;"></circle>
+          <!-- far skyline -->
+          <g opacity="0.92">
+            <rect x="70" y="300" width="46" height="150" fill="#16223C"></rect>
+            <rect x="124" y="270" width="34" height="180" fill="#13203A"></rect>
+            <path d="M170 250 L186 220 L202 250 L202 450 L170 450 Z" fill="#18243F"></path>
+            <rect x="183" y="200" width="6" height="34" fill="#18243F"></rect>
+            <rect x="214" y="290" width="40" height="160" fill="#15213B"></rect>
+            <rect x="262" y="262" width="28" height="188" fill="#121E37"></rect>
+            <rect x="930" y="286" width="40" height="164" fill="#15213B"></rect>
+            <rect x="978" y="256" width="30" height="194" fill="#121E37"></rect>
+            <path d="M1016 250 L1030 224 L1044 250 L1044 450 L1016 450 Z" fill="#17233E"></path>
+            <rect x="1052" y="300" width="42" height="150" fill="#16223C"></rect>
+            <rect x="1100" y="320" width="34" height="130" fill="#13203A"></rect>
+          </g>
+          <g fill="#E8B45A" opacity="0.5">
+            <rect x="80" y="320" width="3" height="5"></rect><rect x="92" y="340" width="3" height="5"></rect><rect x="134" y="300" width="3" height="5"></rect><rect x="142" y="330" width="3" height="5"></rect>
+            <rect x="942" y="310" width="3" height="5"></rect><rect x="988" y="290" width="3" height="5"></rect><rect x="1000" y="330" width="3" height="5"></rect><rect x="1064" y="340" width="3" height="5"></rect>
+          </g>
+          <rect x="0" y="380" width="1200" height="90" fill="#2A2E44" opacity="0.28"></rect>
+          <!-- stadium -->
+          <g style="animation:floatY 9s ease-in-out infinite;">
+            <ellipse cx="600" cy="372" rx="270" ry="60" fill="url(#halo)" opacity="0.55" style="animation:pulseRing 6s ease-in-out infinite;"></ellipse>
+            <path d="M380 430 Q380 320 600 312 Q820 320 820 430 Z" fill="url(#domeG)" stroke="rgba(232,180,90,.25)" stroke-width="1.5"></path>
+            <ellipse cx="600" cy="430" rx="220" ry="34" fill="#101A2E"></ellipse>
+            <path d="M600 322 L628 350 L600 372 L572 350 Z" fill="#FFD89A" opacity="0.92"></path>
+            <path d="M600 330 L618 350 L600 365 L582 350 Z" fill="#FFF0CC"></path>
+            <path d="M412 414 Q600 350 788 414" stroke="#E8B45A" stroke-width="2.4" fill="none" opacity="0.7"></path>
+            <g fill="#FFE2A6" opacity="0.85"><circle cx="470" cy="408" r="2"></circle><circle cx="510" cy="400" r="2"></circle><circle cx="560" cy="395" r="2"></circle><circle cx="640" cy="395" r="2"></circle><circle cx="690" cy="400" r="2"></circle><circle cx="730" cy="408" r="2"></circle></g>
+          </g>
+          <!-- road / traffic -->
+          <path d="M0 620 L420 442 L780 442 L1200 620 Z" fill="url(#road)"></path>
+          <path d="M600 442 L600 620" stroke="#E8B45A" stroke-width="3" stroke-dasharray="14 16" opacity="0.35" style="animation:dashMove 1.4s linear infinite;"></path>
+          <path d="M470 442 L300 620" stroke="rgba(255,255,255,.08)" stroke-width="2"></path>
+          <path d="M730 442 L900 620" stroke="rgba(255,255,255,.08)" stroke-width="2"></path>
+          <g>
+            <g transform="translate(508,470)"><rect width="34" height="17" rx="5" fill="#2E3C5C"></rect><circle cx="5" cy="16" r="2.4" fill="#E2685B"></circle><circle cx="29" cy="16" r="2.4" fill="#E2685B"></circle></g>
+            <g transform="translate(620,468)"><rect width="36" height="17" rx="5" fill="#39456A"></rect><circle cx="5" cy="16" r="2.4" fill="#E2685B"></circle><circle cx="31" cy="16" r="2.4" fill="#E2685B"></circle></g>
+            <g transform="translate(470,512)"><rect width="44" height="21" rx="6" fill="#33415F"></rect><circle cx="6" cy="20" r="3" fill="#E2685B"></circle><circle cx="38" cy="20" r="3" fill="#E2685B"></circle></g>
+            <g transform="translate(660,510)"><rect width="46" height="21" rx="6" fill="#2C3A58"></rect><circle cx="6" cy="20" r="3" fill="#E2685B"></circle><circle cx="40" cy="20" r="3" fill="#E2685B"></circle></g>
+            <g transform="translate(420,566)"><rect width="58" height="27" rx="7" fill="#39466A"></rect><circle cx="8" cy="26" r="3.6" fill="#E2685B"></circle><circle cx="50" cy="26" r="3.6" fill="#E2685B"></circle></g>
+            <g transform="translate(700,562)"><rect width="60" height="27" rx="7" fill="#2F3D5C"></rect><circle cx="8" cy="26" r="3.6" fill="#E2685B"></circle><circle cx="52" cy="26" r="3.6" fill="#E2685B"></circle></g>
+            <g transform="translate(250,590)"><rect width="40" height="20" rx="6" fill="#34425F"></rect><circle cx="36" cy="3" r="2.6" fill="#FFE2A6"></circle></g>
+            <g transform="translate(910,588)"><rect width="42" height="20" rx="6" fill="#34425F"></rect><circle cx="6" cy="3" r="2.6" fill="#FFE2A6"></circle></g>
+            <g transform="translate(556,490)"><rect width="40" height="18" rx="5" fill="#364568"></rect><circle cx="5" cy="17" r="2.6" fill="#E2685B"></circle><circle cx="35" cy="17" r="2.6" fill="#E2685B"></circle></g>
+            <g transform="translate(516,536)"><rect width="50" height="23" rx="6" fill="#39466A"></rect><circle cx="7" cy="22" r="3.2" fill="#E2685B"></circle><circle cx="43" cy="22" r="3.2" fill="#E2685B"></circle></g>
+            <g transform="translate(636,538)"><rect width="50" height="23" rx="6" fill="#313F5E"></rect><circle cx="7" cy="22" r="3.2" fill="#E2685B"></circle><circle cx="43" cy="22" r="3.2" fill="#E2685B"></circle></g>
+            <g transform="translate(560,584)"><rect width="62" height="28" rx="7" fill="#3C4A6E"></rect><circle cx="9" cy="27" r="3.8" fill="#E2685B"></circle><circle cx="53" cy="27" r="3.8" fill="#E2685B"></circle></g>
+          </g>
+          <rect width="1200" height="620" fill="url(#vig)" opacity="0.5"></rect>
+        </svg>
+      </div>
+      <div data-reveal style="opacity:0;transition:opacity 1s ease .5s;margin-top:18px;font-size:13px;color:#6E7A90;letter-spacing:.3px;">Illustration — the problem WaveIn solves: 70,000 fans converging on one target.</div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section style="max-width:1180px;margin:0 auto;padding:clamp(60px,9vw,120px) clamp(20px,4vw,40px) 30px;">
+      <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);text-align:center;max-width:64ch;margin:0 auto;">
+        <div style="font-size:12.5px;font-weight:700;letter-spacing:2px;color:#E2685B;text-transform:uppercase;">The problem</div>
+        <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(32px,5vw,60px);line-height:1.05;letter-spacing:-.4px;margin:14px 0 0;color:#F7F1E6;">70,000 fans. One target.<br><span style="color:#E2685B;font-style:italic;">One catastrophic spike.</span></h2>
+        <p style="margin:18px auto 0;font-size:17px;line-height:1.6;color:#A9B5C8;max-width:52ch;">When everyone aims for kickoff, arrivals collapse into a single 15-minute window — gridlock, idling engines, and a wall of carbon.</p>
+      </div>
+      <div data-reveal style="opacity:0;transform:translateY(34px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .12s,transform 1s cubic-bezier(.16,1,.3,1) .12s;margin-top:42px;background:linear-gradient(180deg,rgba(226,104,91,.07),rgba(13,19,31,.4));border:1px solid rgba(226,104,91,.18);border-radius:20px;padding:30px clamp(16px,3vw,34px);">
+        <svg viewBox="0 0 1000 380" width="100%" style="display:block;overflow:visible;">
+          <g stroke="rgba(255,255,255,.06)" stroke-width="1"><line x1="64" y1="28" x2="976" y2="28"></line><line x1="64" y1="104.5" x2="976" y2="104.5"></line><line x1="64" y1="181" x2="976" y2="181"></line><line x1="64" y1="257.5" x2="976" y2="257.5"></line><line x1="64" y1="334" x2="976" y2="334"></line></g>
+          <g fill="#5E6A80" font-size="12" font-family="Hanken Grotesk" text-anchor="end"><text x="54" y="32">8,000</text><text x="54" y="185">4,000</text><text x="54" y="338">0</text></g>
+          <line x1="905.8" y1="20" x2="905.8" y2="334" stroke="rgba(255,255,255,.3)" stroke-width="1.4" stroke-dasharray="5 6"></line>
+          <text x="905.8" y="14" fill="#C7D0DE" font-size="12" font-family="Hanken Grotesk" text-anchor="middle">Kickoff</text>
+          <path d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6 L 976.0 334 L 64.0 334 Z" fill="rgba(226,104,91,.18)"></path>
+          <path data-draw d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6" fill="none" stroke="#E2685B" stroke-width="3.2" stroke-linecap="round"></path>
+          <g fill="#5E6A80" font-size="11.5" font-family="Hanken Grotesk" text-anchor="middle"><text x="64" y="356">4:00</text><text x="344.6" y="356">5:00</text><text x="625.2" y="356">6:00</text><text x="905.8" y="356">7:00</text></g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- SOLUTION -->
+    <section style="max-width:1180px;margin:0 auto;padding:clamp(40px,6vw,80px) clamp(20px,4vw,40px) 30px;">
+      <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);text-align:center;max-width:64ch;margin:0 auto;">
+        <div style="font-size:12.5px;font-weight:700;letter-spacing:2px;color:#5BD6A0;text-transform:uppercase;">The solution</div>
+        <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(32px,5vw,60px);line-height:1.05;letter-spacing:-.4px;margin:14px 0 0;color:#F7F1E6;">WaveIn spreads arrivals across<br><span style="color:#5BD6A0;font-style:italic;">the full entry window.</span></h2>
+        <p style="margin:18px auto 0;font-size:17px;line-height:1.6;color:#A9B5C8;max-width:52ch;">Personalized waves flatten the spike into a smooth, manageable flow — fewer idling engines, calmer gates, a better night.</p>
+      </div>
+      <div data-reveal style="opacity:0;transform:translateY(34px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .12s,transform 1s cubic-bezier(.16,1,.3,1) .12s;margin-top:42px;background:linear-gradient(180deg,rgba(91,214,160,.06),rgba(13,19,31,.4));border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:30px clamp(16px,3vw,34px);">
+        <div style="display:flex;gap:22px;justify-content:flex-end;margin-bottom:6px;font-size:13px;font-weight:600;">
+          <span style="display:inline-flex;align-items:center;gap:7px;color:#E2685B;"><span style="width:14px;height:3px;border-radius:2px;background:#E2685B;"></span>Without WaveIn</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;color:#5BD6A0;"><span style="width:14px;height:3px;border-radius:2px;background:#5BD6A0;"></span>With WaveIn</span>
+        </div>
+        <svg viewBox="0 0 1000 380" width="100%" style="display:block;overflow:visible;">
+          <g stroke="rgba(255,255,255,.06)" stroke-width="1"><line x1="64" y1="28" x2="976" y2="28"></line><line x1="64" y1="104.5" x2="976" y2="104.5"></line><line x1="64" y1="181" x2="976" y2="181"></line><line x1="64" y1="257.5" x2="976" y2="257.5"></line><line x1="64" y1="334" x2="976" y2="334"></line></g>
+          <g fill="#5E6A80" font-size="12" font-family="Hanken Grotesk" text-anchor="end"><text x="54" y="32">8,000</text><text x="54" y="185">4,000</text><text x="54" y="338">0</text></g>
+          <line x1="905.8" y1="20" x2="905.8" y2="334" stroke="rgba(255,255,255,.3)" stroke-width="1.4" stroke-dasharray="5 6"></line>
+          <text x="905.8" y="14" fill="#C7D0DE" font-size="12" font-family="Hanken Grotesk" text-anchor="middle">Kickoff</text>
+          <path d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6 L 976.0 334 L 64.0 334 Z" fill="rgba(226,104,91,.10)"></path>
+          <path data-draw d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6" fill="none" stroke="#E2685B" stroke-width="2.4" stroke-linecap="round" opacity="0.55"></path>
+          <path d="M 64.0 315.6 C 75.7 309.5 110.8 292.2 134.2 278.9 C 157.5 265.7 180.9 248.3 204.3 236.1 C 227.7 223.8 251.1 214.7 274.5 205.5 C 297.8 196.3 321.2 187.6 344.6 181.0 C 368.0 174.4 391.4 169.3 414.8 165.7 C 438.2 162.1 461.5 160.1 484.9 159.6 C 508.3 159.1 531.7 160.1 555.1 162.6 C 578.5 165.2 601.8 169.8 625.2 174.9 C 648.6 180.0 672.0 187.1 695.4 193.2 C 718.8 199.4 742.2 204.5 765.5 211.6 C 788.9 218.7 812.3 225.9 835.7 236.1 C 859.1 246.3 882.5 261.6 905.8 272.8 C 929.2 284.0 964.3 298.3 976.0 303.4 L 976.0 334 L 64.0 334 Z" fill="rgba(91,214,160,.16)"></path>
+          <path data-draw d="M 64.0 315.6 C 75.7 309.5 110.8 292.2 134.2 278.9 C 157.5 265.7 180.9 248.3 204.3 236.1 C 227.7 223.8 251.1 214.7 274.5 205.5 C 297.8 196.3 321.2 187.6 344.6 181.0 C 368.0 174.4 391.4 169.3 414.8 165.7 C 438.2 162.1 461.5 160.1 484.9 159.6 C 508.3 159.1 531.7 160.1 555.1 162.6 C 578.5 165.2 601.8 169.8 625.2 174.9 C 648.6 180.0 672.0 187.1 695.4 193.2 C 718.8 199.4 742.2 204.5 765.5 211.6 C 788.9 218.7 812.3 225.9 835.7 236.1 C 859.1 246.3 882.5 261.6 905.8 272.8 C 929.2 284.0 964.3 298.3 976.0 303.4" fill="none" stroke="#5BD6A0" stroke-width="3.4" stroke-linecap="round"></path>
+          <g fill="#5E6A80" font-size="11.5" font-family="Hanken Grotesk" text-anchor="middle"><text x="64" y="356">4:00</text><text x="344.6" y="356">5:00</text><text x="625.2" y="356">6:00</text><text x="905.8" y="356">7:00</text></g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section style="background:#F6EFE2;color:#1A2235;margin-top:clamp(50px,7vw,100px);padding:clamp(60px,8vw,108px) clamp(20px,4vw,40px);position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-120px;right:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(224,162,74,.16),transparent 70%);"></div>
+      <div style="max-width:1100px;margin:0 auto;position:relative;">
+        <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);text-align:center;">
+          <div style="font-size:12.5px;font-weight:700;letter-spacing:2px;color:#C0863A;text-transform:uppercase;">How it works</div>
+          <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(32px,4.8vw,58px);line-height:1.05;letter-spacing:-.3px;margin:12px 0 0;color:#1A2235;">Three steps to a <span style="font-style:italic;color:#C0863A;">better arrival.</span></h2>
+        </div>
+        <div data-reveal style="opacity:0;transform:translateY(32px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .1s,transform 1s cubic-bezier(.16,1,.3,1) .1s;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:46px;">
+          <div style="background:#FFFDF8;border:1px solid rgba(26,34,53,.08);border-radius:18px;padding:30px 26px;box-shadow:0 16px 40px rgba(120,90,40,.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><span style="font-family:'Instrument Serif',serif;font-size:40px;color:#E0A24A;line-height:1;">01</span>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A2235" stroke-width="1.6"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg></div>
+            <h3 style="font-size:19px;font-weight:700;margin:0 0 8px;letter-spacing:-.2px;">Enter your origin</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:#56607A;">Tell WaveIn where you're starting and how you'll travel — MARTA, driving, or rideshare.</p>
+          </div>
+          <div style="background:#FFFDF8;border:1px solid rgba(26,34,53,.08);border-radius:18px;padding:30px 26px;box-shadow:0 16px 40px rgba(120,90,40,.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><span style="font-family:'Instrument Serif',serif;font-size:40px;color:#E0A24A;line-height:1;">02</span>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A2235" stroke-width="1.6"><path d="M3 13c3-5 6-5 9 0s6 5 9 0"></path><path d="M3 18c3-5 6-5 9 0s6 5 9 0" opacity=".5"></path></svg></div>
+            <h3 style="font-size:19px;font-weight:700;margin:0 0 8px;letter-spacing:-.2px;">Get your wave</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:#56607A;">In seconds, you're matched to a personalized arrival window — with priority for the early & green.</p>
+          </div>
+          <div style="background:#FFFDF8;border:1px solid rgba(26,34,53,.08);border-radius:18px;padding:30px 26px;box-shadow:0 16px 40px rgba(120,90,40,.08);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><span style="font-family:'Instrument Serif',serif;font-size:40px;color:#E0A24A;line-height:1;">03</span>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A2235" stroke-width="1.6"><path d="M20 7H4v5h16V7Z"></path><path d="M5 12v8h14v-8M12 7v13M12 7S9 3 7 4.5 9 7 12 7Zm0 0s3-4 5-2.5S15 7 12 7Z"></path></svg></div>
+            <h3 style="font-size:19px;font-weight:700;margin:0 0 8px;letter-spacing:-.2px;">Arrive stress-free</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:#56607A;">Glide past the crush, walk into a calmer gate, and unlock rewards for showing up smart.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUSTAINABILITY -->
+    <section style="position:relative;padding:clamp(70px,9vw,128px) clamp(20px,4vw,40px);overflow:hidden;">
+      <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(91,214,160,.10),transparent 60%);"></div>
+      <div style="max-width:1100px;margin:0 auto;position:relative;text-align:center;">
+        <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);">
+          <div style="font-size:12.5px;font-weight:700;letter-spacing:2px;color:#5BD6A0;text-transform:uppercase;">Sustainability impact</div>
+          <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(32px,5vw,60px);line-height:1.04;letter-spacing:-.4px;margin:12px 0 0;color:#F7F1E6;">A small change, at <span style="font-style:italic;color:#5BD6A0;">stadium scale.</span></h2>
+        </div>
+        <div data-reveal style="opacity:0;transform:translateY(30px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .1s,transform 1s cubic-bezier(.16,1,.3,1) .1s;margin-top:44px;background:linear-gradient(180deg,rgba(91,214,160,.10),rgba(13,22,30,.55));border:1px solid rgba(91,214,160,.22);border-radius:24px;padding:clamp(34px,5vw,56px);">
+          <div style="font-size:14px;font-weight:600;letter-spacing:1.4px;color:#8FE3C0;text-transform:uppercase;">Projected across 8 WC26 games</div>
+          <div style="display:flex;align-items:baseline;justify-content:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
+            <span data-count="408000" data-dur="2100" style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(58px,11vw,128px);line-height:1;color:#5BD6A0;letter-spacing:-1px;">0</span>
+            <span style="font-size:clamp(20px,3vw,30px);font-weight:700;color:#CDEFDF;">kg CO₂ eliminated</span>
+          </div>
+          <div style="width:120px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,#5BD6A0,transparent);margin:26px auto 0;"></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px;">
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:26px 18px;">
+              <div style="font-size:30px;margin-bottom:6px;">🌳</div>
+              <div style="font-family:'Instrument Serif',serif;font-size:clamp(30px,4vw,48px);color:#F4EDE0;line-height:1;"><span data-count="2190" data-dur="1900">0</span></div>
+              <div style="font-size:14px;color:#9FB6AC;margin-top:8px;font-weight:600;">trees planted</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:26px 18px;">
+              <div style="font-size:30px;margin-bottom:6px;">🚗</div>
+              <div style="font-family:'Instrument Serif',serif;font-size:clamp(30px,4vw,48px);color:#F4EDE0;line-height:1;"><span data-count="89" data-dur="1700">0</span></div>
+              <div style="font-size:14px;color:#9FB6AC;margin-top:8px;font-weight:600;">cars removed for a year</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:26px 18px;">
+              <div style="font-size:30px;margin-bottom:6px;">✈️</div>
+              <div style="font-family:'Instrument Serif',serif;font-size:clamp(30px,4vw,48px);color:#F4EDE0;line-height:1;"><span data-count="51" data-dur="1700">0</span></div>
+              <div style="font-size:14px;color:#9FB6AC;margin-top:8px;font-weight:600;">transatlantic flights offset</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TWO PATHS -->
+    <section style="max-width:1180px;margin:0 auto;padding:clamp(20px,3vw,40px) clamp(20px,4vw,40px) clamp(70px,9vw,120px);">
+      <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);text-align:center;margin-bottom:38px;">
+        <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(30px,4.6vw,56px);letter-spacing:-.3px;margin:0;color:#F7F1E6;">Choose your <span style="font-style:italic;color:#E8B45A;">side of the wave.</span></h2>
+      </div>
+      <div data-reveal style="opacity:0;transform:translateY(32px);transition:opacity 1s cubic-bezier(.16,1,.3,1) .1s,transform 1s cubic-bezier(.16,1,.3,1) .1s;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div style="position:relative;overflow:hidden;border-radius:22px;padding:clamp(30px,4vw,46px);background:linear-gradient(160deg,#16243F,#0D1729);border:1px solid rgba(255,255,255,.09);min-height:300px;display:flex;flex-direction:column;">
+          <div style="position:absolute;top:-60px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(52,116,196,.3),transparent 70%);"></div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:1.6px;color:#7FA8E0;text-transform:uppercase;">For Organizers</div>
+          <h3 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(26px,3.4vw,38px);margin:12px 0 0;line-height:1.1;color:#F4EDE0;">Run the night from one command center.</h3>
+          <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#9FB0C8;flex:1;">Live arrival curves, wave assignments, and real-time CO₂ savings for city operators, event staff, and MARTA.</p>
+          <button onClick="{{ openOrg }}" style="align-self:flex-start;margin-top:24px;display:inline-flex;align-items:center;gap:8px;padding:14px 26px;border-radius:12px;border:1px solid rgba(127,168,224,.4);cursor:pointer;font-family:inherit;font-size:15.5px;font-weight:700;color:#F4EDE0;background:rgba(52,116,196,.18);">Open the dashboard <span>→</span></button>
+        </div>
+        <div style="position:relative;overflow:hidden;border-radius:22px;padding:clamp(30px,4vw,46px);background:linear-gradient(160deg,#F6EFE2,#EFE2CC);border:1px solid rgba(224,162,74,.3);min-height:300px;display:flex;flex-direction:column;color:#1A2235;">
+          <div style="position:absolute;top:-60px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(224,162,74,.3),transparent 70%);"></div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:1.6px;color:#C0863A;text-transform:uppercase;">For Fans</div>
+          <h3 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(26px,3.4vw,38px);margin:12px 0 0;line-height:1.1;">Find your wave in under a minute.</h3>
+          <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#5A6276;flex:1;">Get a personalized arrival window for WC26 — plus rewards when you come early and ride MARTA.</p>
+          <button onClick="{{ openFan }}" style="align-self:flex-start;margin-top:24px;display:inline-flex;align-items:center;gap:8px;padding:14px 26px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;font-size:15.5px;font-weight:700;color:#1A1206;background:linear-gradient(180deg,#F0C572,#E0A24A);box-shadow:0 10px 26px rgba(224,162,74,.32);">Find my wave <span>→</span></button>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:48px;padding-top:28px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <span style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#C7D0DE;">Wave<span style="color:#E8B45A;margin-left:-9px;">In</span><span style="color:#6E7A90;font-weight:500;margin-left:6px;">· Play With Purpose · Atlanta 2026</span></span>
+        <span style="font-size:13px;color:#6E7A90;">Free Kick Track — Events &amp; Entertainment</span>
+      </div>
+    </section>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:1;max-width:1340px;margin:0 auto;padding:clamp(24px,3.5vw,44px) clamp(18px,3vw,40px) 80px;">
+      <!-- header -->
+      <div data-reveal style="opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;margin-bottom:30px;">
+        <div>
+          <div style="font-size:12.5px;font-weight:700;letter-spacing:1.8px;color:#E8B45A;text-transform:uppercase;">Organizer · Live</div>
+          <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(34px,4.4vw,56px);letter-spacing:-.4px;margin:6px 0 0;color:#F7F1E6;">Event Command Center</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" stroke-width="1.6"><ellipse cx="12" cy="12" rx="9" ry="5"></ellipse><path d="M3 12c0 3 4 5 9 5s9-2 9-5"></path></svg>
+            <div style="text-align:left;line-height:1.25;white-space:nowrap;"><div style="font-size:14px;font-weight:700;color:#F4EDE0;">Spain vs Cape Verde</div><div style="font-size:11.5px;color:#8A98AE;">Jun 15, 2026 · 7:00pm KO</div></div>
+            <span style="color:#8A98AE;font-size:12px;margin-left:4px;">▾</span>
+          </div>
+          <button style="padding:11px 18px;border-radius:12px;border:1px solid rgba(232,180,90,.45);background:rgba(232,180,90,.1);color:#E8B45A;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">+ New Event</button>
+          <span style="display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;background:rgba(91,214,160,.12);border:1px solid rgba(91,214,160,.3);color:#5BD6A0;font-size:13px;font-weight:700;letter-spacing:.5px;"><span style="width:8px;height:8px;border-radius:50%;background:#5BD6A0;box-shadow:0 0 10px #5BD6A0;animation:twinkle 1.6s ease-in-out infinite;"></span>LIVE</span>
+        </div>
+      </div>
+
+      <!-- stat cards -->
+      <div data-reveal style="opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.16,1,.3,1) .06s,transform .8s cubic-bezier(.16,1,.3,1) .06s;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;">
+        <div style="background:linear-gradient(165deg,rgba(232,180,90,.1),rgba(20,30,50,.5));border:1px solid rgba(232,180,90,.18);border-radius:18px;padding:22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11.5px;font-weight:700;letter-spacing:1.2px;color:#9AA7BC;text-transform:uppercase;white-space:nowrap;">Total Fans</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" stroke-width="1.5"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5"></path><path d="M16 6a3 3 0 0 1 0 6M21 20c0-2.5-1.5-4.3-4-4.8"></path></svg></div>
+          <div style="font-size:clamp(32px,3.4vw,44px);font-weight:800;color:#F4EDE0;letter-spacing:-1px;margin-top:14px;line-height:1;">68,400</div>
+          <div style="font-size:12.5px;color:#8A98AE;margin-top:8px;">Spain vs Cape Verde · Jun 15</div>
+        </div>
+        <div style="background:linear-gradient(165deg,rgba(255,255,255,.05),rgba(20,30,50,.5));border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11.5px;font-weight:700;letter-spacing:1.2px;color:#9AA7BC;text-transform:uppercase;white-space:nowrap;">Active Waves</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FA8D8" stroke-width="1.5"><path d="M3 12c3-5 6-5 9 0s6 5 9 0"></path><path d="M3 17c3-5 6-5 9 0s6 5 9 0" opacity=".5"></path></svg></div>
+          <div style="font-size:clamp(32px,3.4vw,44px);font-weight:800;color:#E8B45A;letter-spacing:-1px;margin-top:14px;line-height:1;">4</div>
+          <div style="font-size:12.5px;color:#8A98AE;margin-top:8px;">Waves 1–4 operational</div>
+        </div>
+        <div style="background:linear-gradient(165deg,rgba(91,214,160,.1),rgba(20,30,50,.5));border:1px solid rgba(91,214,160,.2);border-radius:18px;padding:22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11.5px;font-weight:700;letter-spacing:1.2px;color:#9AA7BC;text-transform:uppercase;white-space:nowrap;">CO₂ Saved</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5BD6A0" stroke-width="1.5"><path d="M11 20A7 7 0 0 1 9.8 6.1C15 5 17 4 19 2c1 2 1 6-1 9a7 7 0 0 1-7 9Z"></path><path d="M11 20c0-4 2-7 5-9"></path></svg></div>
+          <div style="margin-top:14px;line-height:1;"><span data-count="21942" data-dur="1800" style="font-size:clamp(32px,3.4vw,44px);font-weight:800;color:#5BD6A0;letter-spacing:-1px;">0</span><span style="font-size:16px;font-weight:700;color:#5BD6A0;margin-left:5px;">kg</span></div>
+          <div style="font-size:12.5px;color:#8A98AE;margin-top:8px;">this event</div>
+        </div>
+        <div style="background:linear-gradient(165deg,rgba(82,140,210,.1),rgba(20,30,50,.5));border:1px solid rgba(82,140,210,.2);border-radius:18px;padding:22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11.5px;font-weight:700;letter-spacing:1.2px;color:#9AA7BC;text-transform:uppercase;white-space:nowrap;">Car → MARTA</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6FA0E0" stroke-width="1.5"><rect x="4" y="5" width="16" height="11" rx="2"></rect><path d="M4 11h16M8 20l1-4M16 20l-1-4"></path></svg></div>
+          <div style="font-size:clamp(32px,3.4vw,44px);font-weight:800;color:#6FA0E0;letter-spacing:-1px;margin-top:14px;line-height:1;">12,001</div>
+          <div style="font-size:12.5px;color:#8A98AE;margin-top:8px;">fans rerouted to transit</div>
+        </div>
+      </div>
+
+      <!-- chart -->
+      <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .1s,transform .9s cubic-bezier(.16,1,.3,1) .1s;background:linear-gradient(180deg,rgba(20,31,54,.6),rgba(13,19,31,.5));border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:24px clamp(16px,2.5vw,30px);margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <h3 style="font-size:16px;font-weight:700;margin:0;color:#F4EDE0;">Arrival Distribution <span style="color:#8A98AE;font-weight:500;">— Spain vs Cape Verde, Jun 15 · 7:00pm KO</span></h3>
+          <div style="display:flex;gap:18px;font-size:13px;font-weight:600;"><span style="display:inline-flex;align-items:center;gap:7px;color:#E2685B;"><span style="width:14px;height:3px;border-radius:2px;background:#E2685B;"></span>Without WaveIn</span><span style="display:inline-flex;align-items:center;gap:7px;color:#5BD6A0;"><span style="width:14px;height:3px;border-radius:2px;background:#5BD6A0;"></span>With WaveIn</span></div>
+        </div>
+        <svg viewBox="0 0 1000 380" width="100%" style="display:block;overflow:visible;">
+          <g stroke="rgba(255,255,255,.06)" stroke-width="1"><line x1="64" y1="28" x2="976" y2="28"></line><line x1="64" y1="104.5" x2="976" y2="104.5"></line><line x1="64" y1="181" x2="976" y2="181"></line><line x1="64" y1="257.5" x2="976" y2="257.5"></line><line x1="64" y1="334" x2="976" y2="334"></line></g>
+          <g fill="#5E6A80" font-size="12" font-family="Hanken Grotesk" text-anchor="end"><text x="54" y="32">8,000</text><text x="54" y="108">6,000</text><text x="54" y="185">4,000</text><text x="54" y="261">2,000</text><text x="54" y="338">0</text></g>
+          <text x="20" y="190" fill="#5E6A80" font-size="11" font-family="Hanken Grotesk" text-anchor="middle" transform="rotate(-90 20 190)">Fans / 15 min</text>
+          <line x1="905.8" y1="20" x2="905.8" y2="334" stroke="rgba(255,255,255,.32)" stroke-width="1.4" stroke-dasharray="5 6"></line>
+          <rect x="868" y="6" width="76" height="20" rx="6" fill="rgba(20,31,54,.9)" stroke="rgba(255,255,255,.15)"></rect><text x="906" y="20" fill="#C7D0DE" font-size="12" font-family="Hanken Grotesk" text-anchor="middle">Kickoff</text>
+          <path d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6 L 976.0 334 L 64.0 334 Z" fill="rgba(226,104,91,.16)"></path>
+          <path data-draw d="M 64.0 327.9 C 75.7 327.4 110.8 325.8 134.2 324.8 C 157.5 323.8 180.9 322.8 204.3 321.8 C 227.7 320.7 251.1 319.7 274.5 318.7 C 297.8 317.7 321.2 317.2 344.6 315.6 C 368.0 314.1 391.4 312.6 414.8 309.5 C 438.2 306.5 461.5 304.4 484.9 297.3 C 508.3 290.1 531.7 286.1 555.1 266.7 C 578.5 247.3 601.8 216.7 625.2 181.0 C 648.6 145.3 672.0 70.3 695.4 52.5 C 718.8 34.6 742.2 49.9 765.5 73.9 C 788.9 97.9 812.3 162.1 835.7 196.3 C 859.1 230.5 882.5 259.0 905.8 278.9 C 929.2 298.8 964.3 309.5 976.0 315.6" fill="none" stroke="#E2685B" stroke-width="3" stroke-linecap="round"></path>
+          <path d="M 64.0 315.6 C 75.7 309.5 110.8 292.2 134.2 278.9 C 157.5 265.7 180.9 248.3 204.3 236.1 C 227.7 223.8 251.1 214.7 274.5 205.5 C 297.8 196.3 321.2 187.6 344.6 181.0 C 368.0 174.4 391.4 169.3 414.8 165.7 C 438.2 162.1 461.5 160.1 484.9 159.6 C 508.3 159.1 531.7 160.1 555.1 162.6 C 578.5 165.2 601.8 169.8 625.2 174.9 C 648.6 180.0 672.0 187.1 695.4 193.2 C 718.8 199.4 742.2 204.5 765.5 211.6 C 788.9 218.7 812.3 225.9 835.7 236.1 C 859.1 246.3 882.5 261.6 905.8 272.8 C 929.2 284.0 964.3 298.3 976.0 303.4 L 976.0 334 L 64.0 334 Z" fill="rgba(91,214,160,.16)"></path>
+          <path data-draw d="M 64.0 315.6 C 75.7 309.5 110.8 292.2 134.2 278.9 C 157.5 265.7 180.9 248.3 204.3 236.1 C 227.7 223.8 251.1 214.7 274.5 205.5 C 297.8 196.3 321.2 187.6 344.6 181.0 C 368.0 174.4 391.4 169.3 414.8 165.7 C 438.2 162.1 461.5 160.1 484.9 159.6 C 508.3 159.1 531.7 160.1 555.1 162.6 C 578.5 165.2 601.8 169.8 625.2 174.9 C 648.6 180.0 672.0 187.1 695.4 193.2 C 718.8 199.4 742.2 204.5 765.5 211.6 C 788.9 218.7 812.3 225.9 835.7 236.1 C 859.1 246.3 882.5 261.6 905.8 272.8 C 929.2 284.0 964.3 298.3 976.0 303.4" fill="none" stroke="#5BD6A0" stroke-width="3.4" stroke-linecap="round"></path>
+          <g fill="#5E6A80" font-size="11" font-family="Hanken Grotesk" text-anchor="middle"><text x="64" y="356">4:00</text><text x="204.3" y="356">4:30</text><text x="344.6" y="356">5:00</text><text x="484.9" y="356">5:30</text><text x="625.2" y="356">6:00</text><text x="765.5" y="356">6:30</text><text x="905.8" y="356">7:00</text><text x="976" y="356">7:15</text></g>
+        </svg>
+      </div>
+
+      <!-- bottom: table + sustainability -->
+      <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;">
+        <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);background:linear-gradient(180deg,rgba(20,31,54,.55),rgba(13,19,31,.5));border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:24px;">
+          <h3 style="font-size:16px;font-weight:700;margin:0 0 18px;color:#F4EDE0;">Wave Assignments <span style="color:#5BD6A0;font-weight:600;">— Active</span></h3>
+          <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.4fr .7fr;gap:10px;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#6E7A90;text-transform:uppercase;padding:0 4px 12px;border-bottom:1px solid rgba(255,255,255,.07);">
+            <span>Wave</span><span>Window</span><span>Zones</span><span>Reward</span><span style="text-align:right;">Fans</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.4fr .7fr;gap:10px;align-items:center;padding:16px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;">
+            <span style="display:flex;align-items:center;gap:8px;font-weight:700;color:#F4EDE0;"><span style="width:9px;height:9px;border-radius:50%;background:#5BD6A0;box-shadow:0 0 8px rgba(91,214,160,.6);"></span>Wave 1</span>
+            <span style="color:#C7D0DE;">4:30 – 5:15pm</span><span style="color:#9AA7BC;">Airport, Downtown</span>
+            <span style="color:#C7D0DE;">Free drink + Priority Gate</span><span style="text-align:right;font-weight:700;color:#F4EDE0;">5,200</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.4fr .7fr;gap:10px;align-items:center;padding:16px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;">
+            <span style="display:flex;align-items:center;gap:8px;font-weight:700;color:#F4EDE0;"><span style="width:9px;height:9px;border-radius:50%;background:#E8B45A;box-shadow:0 0 8px rgba(232,180,90,.6);"></span>Wave 2</span>
+            <span style="color:#C7D0DE;">5:15 – 5:45pm</span><span style="color:#9AA7BC;">Midtown, Buckhead</span>
+            <span style="color:#C7D0DE;">$10 concession credit</span><span style="text-align:right;font-weight:700;color:#F4EDE0;">6,800</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.4fr .7fr;gap:10px;align-items:center;padding:16px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;">
+            <span style="display:flex;align-items:center;gap:8px;font-weight:700;color:#F4EDE0;"><span style="width:9px;height:9px;border-radius:50%;background:#D99A4E;box-shadow:0 0 8px rgba(217,154,78,.5);"></span>Wave 3</span>
+            <span style="color:#C7D0DE;">5:45 – 6:15pm</span><span style="color:#9AA7BC;">Decatur, Sandy Springs</span>
+            <span style="color:#C7D0DE;">Standard + $5 credit</span><span style="text-align:right;font-weight:700;color:#F4EDE0;">4,900</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.4fr .7fr;gap:10px;align-items:center;padding:16px 4px;font-size:13px;">
+            <span style="display:flex;align-items:center;gap:8px;font-weight:700;color:#F4EDE0;"><span style="width:9px;height:9px;border-radius:50%;background:#E2685B;box-shadow:0 0 8px rgba(226,104,91,.5);"></span>Wave 4</span>
+            <span style="color:#C7D0DE;">6:00 – 6:45pm</span><span style="color:#9AA7BC;">Suburbs (30+ min)</span>
+            <span style="color:#C7D0DE;">Standard entry</span><span style="text-align:right;font-weight:700;color:#F4EDE0;">3,100</span>
+          </div>
+        </div>
+
+        <div data-reveal style="opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1) .08s,transform .9s cubic-bezier(.16,1,.3,1) .08s;background:linear-gradient(180deg,rgba(91,214,160,.08),rgba(13,22,30,.5));border:1px solid rgba(91,214,160,.2);border-radius:20px;padding:24px;">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5BD6A0" stroke-width="1.7"><path d="M11 20A7 7 0 0 1 9.8 6.1C15 5 17 4 19 2c1 2 1 6-1 9a7 7 0 0 1-7 9Z"></path></svg><h3 style="font-size:13px;font-weight:700;letter-spacing:1px;color:#5BD6A0;text-transform:uppercase;margin:0;">Sustainability Impact</h3></div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:#9AA7BC;text-transform:uppercase;">CO₂ saved this event</div>
+          <div style="margin:6px 0 12px;line-height:1;"><span data-count="21942" data-dur="1900" style="font-family:'Instrument Serif',serif;font-size:48px;color:#5BD6A0;">0</span><span style="font-size:18px;font-weight:700;color:#5BD6A0;margin-left:6px;">kg</span></div>
+          <div style="height:8px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:22px;"><div style="height:100%;width:62%;border-radius:5px;background:linear-gradient(90deg,#46C08A,#5BD6A0);"></div></div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:#9AA7BC;text-transform:uppercase;">Car → MARTA shifts</div>
+          <div style="margin:6px 0 12px;line-height:1;"><span style="font-family:'Instrument Serif',serif;font-size:36px;color:#6FA0E0;">12,001</span><span style="font-size:14px;font-weight:700;color:#6FA0E0;margin-left:6px;">fans</span></div>
+          <div style="height:8px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:24px;"><div style="height:100%;width:52%;border-radius:5px;background:linear-gradient(90deg,#4A78C0,#6FA0E0);"></div></div>
+          <div style="padding-top:20px;border-top:1px solid rgba(255,255,255,.09);font-size:11px;font-weight:700;letter-spacing:.8px;color:#9AA7BC;text-transform:uppercase;">Projected: full season</div>
+          <div style="margin:6px 0 16px;"><span style="font-family:'Instrument Serif',serif;font-size:32px;color:#F4EDE0;">408,000 kg</span> <span style="font-size:14px;color:#8FE3C0;">CO₂ eliminated</span></div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <div style="display:flex;align-items:center;gap:11px;font-size:14px;color:#C7D0DE;"><span style="font-size:19px;">🌳</span><strong style="color:#F4EDE0;">2,190</strong> trees planted</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:14px;color:#C7D0DE;"><span style="font-size:19px;">🚗</span><strong style="color:#F4EDE0;">89</strong> cars removed for a year</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:14px;color:#C7D0DE;"><span style="font-size:19px;">✈️</span><strong style="color:#F4EDE0;">51</strong> transatlantic flights offset</div>
+          </div>
+          <p style="margin:20px 0 0;font-size:11px;line-height:1.5;color:#6E7A90;">Methodology: counters derived from each wave's fan count, transport mode, and driving distance to Mercedes-Benz Stadium. EPA avg 0.21 kg CO₂/km · round trip · 2.0 occupancy.</p>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isFan }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:1;min-height:calc(100vh - 70px);padding:clamp(28px,5vw,60px) clamp(18px,4vw,40px) 80px;display:flex;align-items:flex-start;justify-content:center;">
+      <div style="position:absolute;inset:0;background:radial-gradient(70% 50% at 50% 0%,rgba(224,162,74,.14),transparent 65%);pointer-events:none;"></div>
+
+      <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+      <div data-reveal style="opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1);position:relative;width:100%;max-width:560px;">
+        <div style="background:linear-gradient(180deg,#17243E,#101A2E);border:1px solid rgba(232,180,90,.18);border-radius:24px;padding:clamp(26px,4vw,40px);box-shadow:0 40px 100px rgba(0,0,0,.5);">
+          <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;background:linear-gradient(90deg,rgba(91,214,160,.18),rgba(232,180,90,.18));border:1px solid rgba(232,180,90,.3);font-size:12px;font-weight:800;letter-spacing:1.5px;color:#F4EDE0;">⚽ WC26</div>
+          <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(38px,6vw,58px);letter-spacing:-.5px;margin:16px 0 4px;line-height:1;color:#F7F1E6;">Find Your Wave</h1>
+          <p style="margin:0 0 24px;font-size:14.5px;color:#9AA7BC;">Spain vs Cape Verde · Jun 15, 2026 · 7:00pm KO</p>
+
+          <div style="position:relative;z-index:5;margin-bottom:18px;">
+            <label style="display:block;font-size:13px;font-weight:700;color:#C7D0DE;margin-bottom:8px;">Which event are you attending?</label>
+            <div style="display:flex;align-items:center;gap:11px;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8B45A" stroke-width="1.5"><ellipse cx="12" cy="12" rx="9" ry="5"></ellipse><path d="M3 12c0 3 4 5 9 5s9-2 9-5"></path></svg>
+              <div style="flex:1;line-height:1.2;"><div style="font-size:14.5px;font-weight:700;color:#F4EDE0;">Spain vs Cape Verde</div><div style="font-size:11.5px;color:#8A98AE;">Jun 15, 2026 · 7:00pm KO</div></div>
+              <span style="color:#8A98AE;">▾</span>
+            </div>
+          </div>
+
+          <div style="position:relative;z-index:20;margin-bottom:18px;">
+            <label style="display:block;font-size:13px;font-weight:700;color:#C7D0DE;margin-bottom:8px;">Where are you coming from?</label>
+            <button onClick="{{ toggleDDOrigin }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);cursor:pointer;font-family:inherit;font-size:14.5px;color:#F4EDE0;">
+              <span style="{{ originColor }}">{{ originLabel }}</span><span style="color:#8A98AE;">▾</span>
+            </button>
+            <sc-if value="{{ ddOrigin }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:100%;left:0;right:0;margin-top:8px;background:#1A2840;border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:6px;box-shadow:0 24px 60px rgba(0,0,0,.6);max-height:260px;overflow:auto;animation:modalIn .22s ease;">
+                <sc-for list="{{ originOptions }}" as="opt" hint-placeholder-count="5">
+                  <button onClick="{{ opt.onClick }}" style="width:100%;text-align:left;padding:12px 14px;border-radius:9px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.5px;color:#E4E9F1;" style-hover="background:rgba(232,180,90,.14);color:#F4EDE0;">{{ opt.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="position:relative;z-index:15;margin-bottom:18px;">
+            <label style="display:block;font-size:13px;font-weight:700;color:#C7D0DE;margin-bottom:8px;">How are you getting here?</label>
+            <button onClick="{{ toggleDDTransport }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);cursor:pointer;font-family:inherit;font-size:14.5px;color:#F4EDE0;">
+              <span style="{{ transportColor }}">{{ transportLabel }}</span><span style="color:#8A98AE;">▾</span>
+            </button>
+            <sc-if value="{{ ddTransport }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:100%;left:0;right:0;margin-top:8px;background:#1A2840;border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:6px;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:modalIn .22s ease;">
+                <sc-for list="{{ transportOptions }}" as="opt" hint-placeholder-count="3">
+                  <button onClick="{{ opt.onClick }}" style="width:100%;text-align:left;padding:11px 14px;border-radius:9px;background:none;border:none;cursor:pointer;font-family:inherit;color:#E4E9F1;display:block;" style-hover="background:rgba(232,180,90,.14);">
+                    <span style="font-size:14.5px;font-weight:600;display:block;">{{ opt.label }}</span><span style="font-size:12px;color:#8A98AE;">{{ opt.sub }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="margin-bottom:26px;">
+            <label style="display:block;font-size:13px;font-weight:700;color:#C7D0DE;margin-bottom:10px;">Earliest you could arrive? <span style="color:#8A98AE;font-weight:500;">(doors open · 4:30)</span></label>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+              <sc-for list="{{ timeButtons }}" as="t" hint-placeholder-count="10">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <button onClick="{{ submitWave }}" style="{{ submitStyle }}">Get My Wave →</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ hasResult }}" hint-placeholder-val="{{ false }}">
+      <div style="position:relative;width:100%;max-width:520px;">
+        <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:24px;">
+          <span style="position:absolute;left:12%;top:0;width:9px;height:9px;background:#E8B45A;border-radius:2px;animation:confettiFall 2.4s ease-in 0s infinite;"></span>
+          <span style="position:absolute;left:28%;top:0;width:8px;height:8px;background:#5BD6A0;border-radius:50%;animation:confettiFall 2.8s ease-in .3s infinite;"></span>
+          <span style="position:absolute;left:46%;top:0;width:10px;height:6px;background:#6FA0E0;animation:confettiFall 2.6s ease-in .15s infinite;"></span>
+          <span style="position:absolute;left:64%;top:0;width:9px;height:9px;background:#F0C572;border-radius:2px;animation:confettiFall 3s ease-in .45s infinite;"></span>
+          <span style="position:absolute;left:80%;top:0;width:8px;height:8px;background:#5BD6A0;border-radius:50%;animation:confettiFall 2.5s ease-in .2s infinite;"></span>
+          <span style="position:absolute;left:90%;top:0;width:7px;height:7px;background:#E8B45A;border-radius:2px;animation:confettiFall 2.9s ease-in .6s infinite;"></span>
+        </div>
+        <div style="position:relative;background:linear-gradient(180deg,#17243E,#101A2E);border:1px solid {{ resultBorder }};border-radius:24px;padding:clamp(28px,4vw,40px);box-shadow:0 40px 110px rgba(0,0,0,.55);animation:resultPop .65s cubic-bezier(.16,1,.3,1);text-align:center;overflow:hidden;">
+          <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:300px;height:200px;background:radial-gradient(circle,{{ resultGlow }},transparent 70%);"></div>
+          <div style="position:relative;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:2px;color:#9AA7BC;text-transform:uppercase;">Your assignment</div>
+            <div style="display:inline-flex;align-items:center;gap:10px;margin-top:14px;padding:12px 26px;border-radius:999px;background:{{ resultBadgeBg }};border:1px solid {{ resultBorder }};">
+              <span style="font-family:'Instrument Serif',serif;font-size:34px;line-height:1;color:{{ resultColor }};">Wave {{ result.wave }}</span>
+              <span style="font-size:13px;font-weight:800;letter-spacing:1.5px;color:{{ resultColor }};">{{ result.label }}</span>
+            </div>
+            <div style="margin-top:24px;font-size:13px;font-weight:700;letter-spacing:1px;color:#8A98AE;text-transform:uppercase;">Arrive between</div>
+            <div style="font-family:'Instrument Serif',serif;font-size:clamp(34px,6vw,52px);color:#F7F1E6;line-height:1.05;margin-top:4px;">{{ result.window }}</div>
+
+            <sc-if value="{{ result.transit }}" hint-placeholder-val="{{ false }}">
+              <div style="display:inline-flex;align-items:center;gap:9px;margin-top:18px;padding:9px 16px;border-radius:12px;background:rgba(91,214,160,.12);border:1px solid rgba(91,214,160,.3);font-size:13.5px;font-weight:700;color:#5BD6A0;">🌱 Transit Bonus Applied — you bumped to an earlier wave</div>
+            </sc-if>
+
+            <div style="margin-top:22px;padding:18px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);text-align:left;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:center;gap:13px;"><span style="font-size:22px;">🎁</span><div><div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:#8A98AE;text-transform:uppercase;">Your reward</div><div style="font-size:15px;font-weight:700;color:#F4EDE0;">{{ result.reward }}</div></div></div>
+              <div style="display:flex;align-items:center;gap:13px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px;"><span style="font-size:22px;">🚪</span><div><div style="font-size:11px;font-weight:700;letter-spacing:.8px;color:#8A98AE;text-transform:uppercase;">Entry</div><div style="font-size:15px;font-weight:700;color:#F4EDE0;">{{ result.gate }}</div></div></div>
+            </div>
+
+            <button style="width:100%;margin-top:22px;padding:16px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;color:#1A1206;background:linear-gradient(180deg,#F0C572,#E0A24A);box-shadow:0 12px 30px rgba(224,162,74,.32);display:inline-flex;align-items:center;justify-content:center;gap:8px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1A1206" stroke-width="2"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg> Get Directions</button>
+            <button onClick="{{ resetWave }}" style="margin-top:12px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600;color:#8A98AE;">← Start over</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(6,10,18,.74);backdrop-filter:blur(8px);animation:fadeIn .3s ease;" onClick="{{ closeModal }}">
+      <div onClick="{{ stop }}" style="width:100%;max-width:430px;background:linear-gradient(180deg,#141F36,#0E1729);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:34px;box-shadow:0 40px 100px rgba(0,0,0,.6);animation:modalIn .45s cubic-bezier(.16,1,.3,1);">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:22px;">
+          <svg width="34" height="34" viewBox="0 0 40 40" fill="none"><rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="url(#lg2)" stroke="rgba(232,180,90,.35)"></rect><path d="M6 25 C 11 16, 16 16, 20 22 C 24 28, 29 28, 34 19" stroke="#F4EDE0" stroke-width="2.6" stroke-linecap="round" fill="none"></path><path d="M6 31 C 11 23, 16 23, 20 28 C 23 31.5, 27 32, 31 28" stroke="#E8B45A" stroke-width="2.4" stroke-linecap="round" fill="none"></path><circle cx="34" cy="19" r="2.7" fill="#E8B45A"></circle><defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#244A86"></stop><stop offset="1" stop-color="#10213F"></stop></linearGradient></defs></svg>
+          <span style="font-size:19px;font-weight:700;">Wave<span style="color:#E8B45A;">In</span></span>
+        </div>
+        <h3 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:30px;margin:0;letter-spacing:-.3px;">{{ modalTitle }}</h3>
+        <p style="margin:6px 0 24px;color:#9AA7BC;font-size:14.5px;">{{ modalSub }}</p>
+        <label style="display:block;font-size:13px;font-weight:600;color:#C7D0DE;margin-bottom:7px;">Email</label>
+        <input type="email" placeholder="you@email.com" style="width:100%;padding:13px 15px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#F4EDE0;font-family:inherit;font-size:15px;outline:none;margin-bottom:16px;"></input>
+        <label style="display:block;font-size:13px;font-weight:600;color:#C7D0DE;margin-bottom:7px;">Password</label>
+        <input type="password" placeholder="••••••••" style="width:100%;padding:13px 15px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#F4EDE0;font-family:inherit;font-size:15px;outline:none;margin-bottom:24px;"></input>
+        <button onClick="{{ modalEnter }}" style="width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;color:#1A1206;background:linear-gradient(180deg,#F0C572,#E0A24A);box-shadow:0 10px 26px rgba(224,162,74,.3);">{{ modalCta }}</button>
+        <div style="text-align:center;margin-top:16px;font-size:13.5px;color:#7E8AA0;">New here? <span style="color:#E8B45A;cursor:pointer;font-weight:600;">Create an account</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen:'landing', modalOpen:false, modalRole:'organizer',
+            fanOrigin:'', fanTransport:'', fanTime:'', fanResult:null, openDD:'' };
+
+  rootRef = (el)=>{ if(el){ this._root = el; } };
+  stop = (e)=>{ e.stopPropagation(); };
+
+  componentDidMount(){ this._onScroll=()=>this.checkReveals(); window.addEventListener('scroll',this._onScroll,{passive:true}); window.addEventListener('resize',this._onScroll); document.addEventListener('visibilitychange',this._onScroll); this.startAnims(); }
+  componentDidUpdate(prev){
+    if(prev.screen !== this.state.screen){
+      try{ window.scrollTo(0,0); }catch(e){}
+      this.startAnims();
+    }
+  }
+  componentWillUnmount(){ window.removeEventListener('scroll',this._onScroll); window.removeEventListener('resize',this._onScroll); if(this._poll) clearInterval(this._poll); }
+
+  startAnims(){
+    requestAnimationFrame(()=>{ this.checkReveals(); setTimeout(()=>this.checkReveals(),140); });
+    if(this._poll) clearInterval(this._poll);
+    this._poll=setInterval(()=>{
+      this.checkReveals();
+      const root=this._root||document;
+      if(root.querySelectorAll('[data-reveal]:not([data-revealed])').length===0){ clearInterval(this._poll); this._poll=null; }
+    },320);
+  }
+  checkReveals(){
+    const root=this._root||document; const vh=window.innerHeight||800;
+    root.querySelectorAll('[data-reveal]').forEach(el=>{
+      if(el.dataset.revealed) return;
+      const r=el.getBoundingClientRect();
+      if(r.top < vh*0.9 && r.bottom > -40) this.revealEl(el);
+    });
+    root.querySelectorAll('[data-draw]').forEach(p=>{
+      if(p._drew) return;
+      const r=p.getBoundingClientRect();
+      if(r.top < vh*0.96 && r.bottom > -40) this.drawPath(p);
+    });
+  }
+  revealEl(el){
+    el.dataset.revealed='1';
+    if(el.hasAttribute('data-count')) this.animateCount(el);
+    el.querySelectorAll('[data-count]').forEach(c=>this.animateCount(c));
+    el.querySelectorAll('[data-draw]').forEach(p=>this.drawPath(p));
+  }
+  animateCount(el){
+    if(el._counted) return; el._counted=true;
+    const to = parseFloat(el.dataset.count); const dur = parseInt(el.dataset.dur||'1700');
+    const dec = parseInt(el.dataset.dec||'0'); const start = performance.now();
+    const tick=(t)=>{ const p=Math.min(1,(t-start)/dur); const e=1-Math.pow(1-p,3); const v=to*e;
+      el.textContent = v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+      if(p<1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+  drawPath(p){
+    if(p._drew) return; p._drew=true;
+    try{ const len=p.getTotalLength(); p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+      p.getBoundingClientRect(); p.style.transition='stroke-dashoffset 2.1s cubic-bezier(.65,0,.35,1)'; p.style.strokeDashoffset='0'; }catch(e){}
+  }
+
+  go=(s)=>{ this.setState({ screen:s, modalOpen:false }); };
+  goHome=()=>this.go('landing');
+  goDash=()=>this.go('dashboard');
+  goFan=()=>this.go('fan');
+  openModal=(role)=>{ this.setState({ modalOpen:true, modalRole:role }); };
+  openOrg=()=>this.openModal('organizer');
+  openFan=()=>this.openModal('fan');
+  closeModal=()=>{ this.setState({ modalOpen:false }); };
+  modalEnter=()=>{ const r=this.state.modalRole; this.setState({ modalOpen:false, screen: r==='organizer'?'dashboard':'fan' }); try{window.scrollTo(0,0);}catch(e){} };
+
+  toggleDD=(n)=>{ this.setState(s=>({ openDD: s.openDD===n?'':n })); };
+  selOrigin=(v)=>this.setState({ fanOrigin:v, openDD:'' });
+  selTransport=(v)=>this.setState({ fanTransport:v, openDD:'' });
+  selTime=(v)=>this.setState({ fanTime:v });
+  resetWave=()=>this.setState({ fanResult:null });
+  submitWave=()=>{
+    const { fanTransport, fanTime } = this.state;
+    if(!this.state.fanOrigin || !fanTransport || !fanTime) return;
+    const times=['4:30pm','4:45pm','5:00pm','5:15pm','5:30pm','5:45pm','6:00pm','6:15pm','6:30pm','6:45pm'];
+    const idx=times.indexOf(fanTime);
+    const marta = fanTransport==='MARTA · Rail';
+    let wave, label, window_, color, reward, gate;
+    if(idx<=2){ wave=1; window_='4:30 – 5:15pm'; }
+    else if(idx<=4){ wave=2; window_='5:15 – 5:45pm'; }
+    else if(idx<=6){ wave=3; window_='5:45 – 6:15pm'; }
+    else { wave=4; window_='6:00 – 6:45pm'; }
+    if(marta && wave>1) wave=Math.max(1, wave-1);
+    if(marta && (idx<=2)){ label='PRIORITY'; }
+    const map={
+      1:{label: marta?'PRIORITY':'EARLY', color:'#5BD6A0', reward:'Free drink + Priority Gate Entry', gate:'Gate A · Priority Lane'},
+      2:{label:'EARLY', color:'#7FD8C0', reward:'$10 concession credit', gate:'Gate B'},
+      3:{label:'STANDARD', color:'#E8B45A', reward:'Standard entry + $5 credit', gate:'Gate C'},
+      4:{label:'STANDARD', color:'#D99A4E', reward:'Standard entry', gate:'Gate D'}
+    };
+    const m=map[wave];
+    this.setState({ fanResult:{ wave, window:window_, transit:marta, ...m } });
+  };
+
+  navBtn(active){
+    return 'padding:8px 16px;border-radius:999px;border:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600;transition:all .25s;'
+      + (active ? 'background:linear-gradient(180deg,#F0C572,#E0A24A);color:#1A1206;box-shadow:0 4px 14px rgba(224,162,74,.3);' : 'background:transparent;color:#A9B5C8;');
+  }
+
+  renderVals(){
+    const s=this.state;
+    const times=['4:30pm','4:45pm','5:00pm','5:15pm','5:30pm','5:45pm','6:00pm','6:15pm','6:30pm','6:45pm'];
+    const baseT='padding:13px 0;border-radius:12px;font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;text-align:center;transition:all .22s;';
+    const timeButtons=times.map(t=>{
+      const sel = s.fanTime===t;
+      return { label:t, onClick:()=>this.selTime(t),
+        style: baseT + (sel
+          ? 'border:1px solid rgba(232,180,90,.6);background:linear-gradient(180deg,rgba(240,197,114,.22),rgba(224,162,74,.12));color:#F4EDE0;box-shadow:0 0 0 1px rgba(232,180,90,.25),0 6px 16px rgba(224,162,74,.18);'
+          : 'border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#C7D0DE;') };
+    });
+    const origins=['Airport / South','Downtown','Midtown','Buckhead','Decatur','Sandy Springs','Suburbs (30+ min)'];
+    const transports=[{label:'MARTA · Rail',sub:'Cleanest — priority waves'},{label:'Driving',sub:'Personal vehicle'},{label:'Rideshare',sub:'Uber / Lyft'}];
+    const originOptions=origins.map(o=>({label:o,onClick:()=>this.selOrigin(o)}));
+    const transportOptions=transports.map(t=>({label:t.label,sub:t.sub,onClick:()=>this.selTransport(t.label)}));
+    const canSubmit = !!(s.fanOrigin && s.fanTransport && s.fanTime);
+    const submitStyle='width:100%;padding:16px;border-radius:14px;border:none;font-family:inherit;font-size:16.5px;font-weight:700;transition:all .3s;'
+      + (canSubmit ? 'cursor:pointer;color:#1A1206;background:linear-gradient(180deg,#F0C572,#E0A24A);box-shadow:0 12px 30px rgba(224,162,74,.34);'
+                   : 'cursor:not-allowed;color:#6E7A90;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);');
+    const rc=(s.fanResult&&s.fanResult.color)||'#5BD6A0';
+    return {
+      rootRef:this.rootRef, stop:this.stop,
+      originColor: s.fanOrigin?'color:#F4EDE0;font-weight:600;':'color:#8A98AE;',
+      transportColor: s.fanTransport?'color:#F4EDE0;font-weight:600;':'color:#8A98AE;',
+      resultColor:rc, resultBorder:rc+'66', resultGlow:rc+'33', resultBadgeBg:rc+'1A',
+      isLanding:s.screen==='landing', isDashboard:s.screen==='dashboard', isFan:s.screen==='fan',
+      goHome:this.goHome, goDash:this.goDash, goFan:this.goFan,
+      navOrgStyle:this.navBtn(s.screen==='dashboard'), navFanStyle:this.navBtn(s.screen==='fan'),
+      openOrg:this.openOrg, openFan:this.openFan, openModal:this.openModal,
+      modalOpen:s.modalOpen, closeModal:this.closeModal, modalEnter:this.modalEnter,
+      modalTitle: s.modalRole==='organizer' ? 'Organizer sign in' : 'Welcome to WaveIn',
+      modalSub: s.modalRole==='organizer' ? 'Access the Event Command Center' : 'Find your wave for WC26',
+      modalCta: s.modalRole==='organizer' ? 'Enter Command Center' : 'Continue to my wave',
+      // fan
+      originOptions, transportOptions, timeButtons,
+      ddOrigin:s.openDD==='origin', ddTransport:s.openDD==='transport',
+      toggleDDOrigin:()=>this.toggleDD('origin'), toggleDDTransport:()=>this.toggleDD('transport'),
+      selOrigin:this.selOrigin, selTransport:this.selTransport,
+      originLabel:s.fanOrigin||'Select your origin', transportLabel:s.fanTransport||'Select your transport',
+      originSet:!!s.fanOrigin, transportSet:!!s.fanTransport,
+      submitWave:this.submitWave, resetWave:this.resetWave, submitStyle, canSubmit,
+      hasResult:!!s.fanResult, showForm:!s.fanResult, result:s.fanResult||{ wave:'', window:'', label:'', color:'#5BD6A0', reward:'', gate:'', transit:false }
+    };
+  }
+}
+</script>
+</body>
+</html>

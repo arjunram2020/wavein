@@ -1,27 +1,98 @@
+/* ============================================================
+   WaveIn — design system (warm premium dark)
+   Tokens, base styles, and all animation keyframes per handoff.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --ink: #0B121F;
+  --panel-navy-1: #16243F;
+  --panel-navy-2: #0D1729;
+  --panel-fan-1: #17243E;
+  --panel-fan-2: #101A2E;
+
+  /* Gold family */
+  --gold: #E8B45A;
+  --gold-btn-top: #F0C572;
+  --gold-btn-bot: #E0A24A;
+  --gold-deep: #D99A4E;
+  --gold-on-cream: #C0863A;
+
+  /* Green family */
+  --green: #5BD6A0;
+  --green-deep: #46C08A;
+  --green-soft: #8FE3C0;
+
+  /* Other accents */
+  --red: #E2685B;
+  --blue: #6FA0E0;
+  --blue-deep: #4A78C0;
+
+  /* Text */
+  --text: #F4EDE0;
+  --text-bright: #F7F1E6;
+  --muted-1: #C7D0DE;
+  --muted-2: #9AA7BC;
+  --muted-3: #8A98AE;
+  --muted-4: #6E7A90;
+  --axis: #5E6A80;
+
+  /* Cream section */
+  --cream-bg: #F6EFE2;
+  --cream-card: #FFFDF8;
+  --cream-deep: #EFE2CC;
+  --ink-on-cream: #1A2235;
+  --muted-on-cream: #56607A;
+
+  /* Fonts (wired from next/font in layout.js) */
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: #0a0a0f;
-  color: #fff;
+  background: var(--ink);
+  color: var(--text);
 }
 
 body {
-  font-family: var(--font-space-grotesk), "Inter", system-ui, sans-serif;
-  letter-spacing: -0.01em;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-button {
-  font-family: inherit;
-}
+button { font-family: inherit; }
 
-@keyframes wiBlink   { 0%,100%{opacity:1} 50%{opacity:0.25} }
-@keyframes wiWipe    { from{transform:scaleX(0)} to{transform:scaleX(1)} }
-@keyframes wiPop     { 0%{transform:scale(0.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
-@keyframes wiSlideUp    { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
-@keyframes wiSlideRight { from{transform:translateX(100%)} to{transform:translateX(0)} }
-@keyframes wiPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(0,255,135,0.55), 0 0 24px rgba(0,255,135,0.35); }
-  50%     { box-shadow: 0 0 0 10px rgba(0,255,135,0), 0 0 34px rgba(0,255,135,0.55); }
+::selection { background: rgba(232, 180, 90, 0.3); }
+
+/* ---- Ambient background blobs ---- */
+@keyframes drift1 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(6vw,4vh) scale(1.15);} }
+@keyframes drift2 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(-5vw,6vh) scale(1.2);} }
+@keyframes drift3 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(4vw,-5vh) scale(1.1);} }
+
+/* ---- Stadium illustration loops ---- */
+@keyframes twinkle   { 0%,100%{opacity:.25;} 50%{opacity:.9;} }
+@keyframes pulseRing { 0%,100%{opacity:.55;transform:scale(1);} 50%{opacity:.95;transform:scale(1.04);} }
+@keyframes floatY    { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+@keyframes dashMove  { to{stroke-dashoffset:-16;} }
+
+/* ---- Modal / dropdown / result ---- */
+@keyframes modalIn   { from{opacity:0;transform:translateY(18px) scale(.97);} to{opacity:1;transform:none;} }
+@keyframes fadeIn    { from{opacity:0;} to{opacity:1;} }
+@keyframes resultPop { 0%{opacity:0;transform:translateY(26px) scale(.94);} 60%{transform:translateY(-4px) scale(1.01);} 100%{opacity:1;transform:none;} }
+@keyframes confettiFall { 0%{transform:translateY(-30px) rotate(0);opacity:0;} 10%{opacity:1;} 100%{transform:translateY(420px) rotate(420deg);opacity:0;} }
+
+/* ---- Scroll reveal ---- */
+@keyframes revealIn { from{opacity:0;transform:translateY(24px);} to{opacity:1;transform:none;} }
+
+.wi-reveal { opacity: 0; transform: translateY(24px); }
+.wi-reveal.is-revealed { animation: revealIn .85s cubic-bezier(.16,1,.3,1) both; }
+
+/* Honor reduced motion everywhere */
+@media (prefers-reduced-motion: reduce) {
+  .wi-reveal { opacity: 1 !important; transform: none !important; animation: none !important; }
+  * { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
 }

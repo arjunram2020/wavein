@@ -1,16 +1,19 @@
 import "./globals.css";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Instrument_Serif, Hanken_Grotesk } from "next/font/google";
 
-const spaceGrotesk = Space_Grotesk({
+const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
 });
 
-const inter = Inter({
+const hankenGrotesk = Hanken_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-hanken-grotesk",
+  display: "swap",
 });
 
 export const metadata = {
@@ -20,7 +23,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      className={`${instrumentSerif.variable} ${hankenGrotesk.variable}`}
+      style={{
+        // Map next/font CSS vars onto the design-system tokens.
+        "--font-serif": `var(--font-instrument-serif), Georgia, serif`,
+        "--font-sans": `var(--font-hanken-grotesk), system-ui, sans-serif`,
+      }}
+    >
       <body>{children}</body>
     </html>
   );

@@ -58,6 +58,10 @@ function CreateEventPanel({ onSave, onClose }) {
 
   const setDetail = (k, v) => setDetails((d) => ({ ...d, [k]: v }));
   const setWave = (i, k, v) => setWaves((ws) => ws.map((w, idx) => (idx === i ? { ...w, [k]: v } : w)));
+  // Renumber Wave names so they stay sequential after add/remove.
+  const renumber = (ws) => ws.map((w, i) => ({ ...w, name: `Wave ${i + 1}` }));
+  const addWave = () => setWaves((ws) => renumber([...ws, BLANK_WAVE(ws.length + 1)]));
+  const removeWave = (i) => setWaves((ws) => (ws.length <= 1 ? ws : renumber(ws.filter((_, idx) => idx !== i))));
 
   const handleSave = () => {
     if (!details.label || !details.date || !details.kickoff || !details.totalFans) {
@@ -116,11 +120,18 @@ function CreateEventPanel({ onSave, onClose }) {
           </div>
 
           {/* Waves */}
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase", marginBottom: 12 }}>Configure waves</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Configure waves ({waves.length})</span>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {waves.map((w, i) => (
               <div key={i} style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)", marginBottom: 10 }}>Wave {i + 1}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)" }}>Wave {i + 1}</span>
+                  {waves.length > 1 && (
+                    <button onClick={() => removeWave(i)} title="Remove wave" style={{ background: "none", border: "none", color: "var(--muted-3)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 2 }}>✕</button>
+                  )}
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <input style={field} placeholder="Window — 4:30 – 5:15pm" value={w.window} onChange={(e) => setWave(i, "window", e.target.value)} />
                   <input style={field} placeholder="Zones — Airport, Downtown" value={w.zones} onChange={(e) => setWave(i, "zones", e.target.value)} />
@@ -131,6 +142,10 @@ function CreateEventPanel({ onSave, onClose }) {
               </div>
             ))}
           </div>
+
+          <button onClick={addWave} style={{ width: "100%", marginTop: 14, padding: 12, borderRadius: 11, cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "var(--gold)", background: "rgba(232,180,90,.08)", border: "1px dashed rgba(232,180,90,.4)" }}>
+            + Add wave
+          </button>
 
           {error && <div style={{ marginTop: 16, fontSize: 13, color: "var(--red)" }}>{error}</div>}
 

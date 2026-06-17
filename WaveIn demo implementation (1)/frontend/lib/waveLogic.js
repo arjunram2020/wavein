@@ -120,7 +120,11 @@ function windowStart(windowStr) {
 export function buildChartFromSubmissions(event, submissions) {
   const koMin = parseTime(event.kickoff);
   const startsAll = event.waveTable.map((w) => windowStart(w.window));
-  const startMin = Math.min(...startsAll);
+  // Anchor the left edge on the event's doors-open time when set; otherwise the
+  // earliest wave start. Everything downstream keys off this anchor.
+  const startMin = event.doorsOpen
+    ? Math.min(parseTime(event.doorsOpen), ...startsAll)
+    : Math.min(...startsAll);
   const endMin = Math.max(koMin + 15, ...event.waveTable.map((w) => windowEnd(w.window)));
 
   const slotCount = Math.round((endMin - startMin) / 15) + 1;

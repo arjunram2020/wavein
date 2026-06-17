@@ -58,14 +58,16 @@ export default function FanView({ events = EVENTS, onFanSubmit }) {
 
   const EVENT = events.find((e) => e.id === selectedId) || events[0];
 
-  // Arrival slots derived from the event's wave windows (start inherits the
-  // window's am/pm so evening events aren't misread as AM).
+  // Arrival slots span doors-open → last wave window. Doors-open is the event's
+  // explicit field when set; otherwise it's inferred from the first wave start.
+  // (Window starts inherit the window's am/pm so evening events aren't read as AM.)
   const slots = useMemo(() => {
     const wt = EVENT.waveTable;
     const meridiem = (t) => (/pm/i.test(t) ? "pm" : /am/i.test(t) ? "am" : "");
     const startMin = (w) => { const [s, e] = w.window.split(" – "); return parseTime(/am|pm/i.test(s) ? s : s + meridiem(e)); };
     const endMin = (w) => parseTime(w.window.split(" – ")[1]);
-    const lo = Math.min(...wt.map(startMin));
+    const inferredLo = Math.min(...wt.map(startMin));
+    const lo = EVENT.doorsOpen ? parseTime(EVENT.doorsOpen) : inferredLo;
     const hi = Math.max(...wt.map(endMin));
     const out = [];
     for (let m = lo; m <= hi; m += 15) out.push({ value: m, label: formatTime(m) });

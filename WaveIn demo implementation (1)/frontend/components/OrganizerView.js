@@ -52,7 +52,7 @@ function StadiumIcon({ stroke = "#E8B45A", size = 20 }) {
 const BLANK_WAVE = (n) => ({ name: `Wave ${n}`, window: "", zones: "", transport: "", reward: "", fans: "" });
 
 function CreateEventPanel({ onSave, onClose }) {
-  const [details, setDetails] = useState({ label: "", category: "WC26", emoji: "⚽", date: "", kickoff: "", totalFans: "" });
+  const [details, setDetails] = useState({ label: "", category: "WC26", emoji: "⚽", date: "", doorsOpen: "", kickoff: "", totalFans: "" });
   const [waves, setWaves] = useState([BLANK_WAVE(1), BLANK_WAVE(2), BLANK_WAVE(3), BLANK_WAVE(4)]);
   const [error, setError] = useState("");
 
@@ -64,7 +64,7 @@ function CreateEventPanel({ onSave, onClose }) {
   const removeWave = (i) => setWaves((ws) => (ws.length <= 1 ? ws : renumber(ws.filter((_, idx) => idx !== i))));
 
   const handleSave = () => {
-    if (!details.label || !details.date || !details.kickoff || !details.totalFans) {
+    if (!details.label || !details.date || !details.doorsOpen || !details.kickoff || !details.totalFans) {
       setError("Please fill in all event details."); return;
     }
     if (waves.some((w) => !w.window || !w.zones || !w.fans)) {
@@ -77,6 +77,7 @@ function CreateEventPanel({ onSave, onClose }) {
       emoji: details.emoji || CATEGORY_EMOJIS[details.category] || "📅",
       label: details.label,
       date: details.date,
+      doorsOpen: details.doorsOpen,
       kickoff: details.kickoff,
       totalFans: fans.toLocaleString(),
       // Counters derived from the wave table (fans × transport × zone distance).
@@ -115,6 +116,7 @@ function CreateEventPanel({ onSave, onClose }) {
             </div>
             <div><label style={lbl}>Emoji</label><input style={field} placeholder="⚽" value={details.emoji} onChange={(e) => setDetail("emoji", e.target.value)} /></div>
             <div><label style={lbl}>Date</label><input style={field} placeholder="Sep 13, 2026" value={details.date} onChange={(e) => setDetail("date", e.target.value)} /></div>
+            <div><label style={lbl}>Doors open</label><input style={field} placeholder="4:30pm" value={details.doorsOpen} onChange={(e) => setDetail("doorsOpen", e.target.value)} /></div>
             <div><label style={lbl}>Kickoff</label><input style={field} placeholder="7:00pm KO" value={details.kickoff} onChange={(e) => setDetail("kickoff", e.target.value)} /></div>
             <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Attendance</label><input style={field} placeholder="72,000" value={details.totalFans} onChange={(e) => setDetail("totalFans", e.target.value)} /></div>
           </div>

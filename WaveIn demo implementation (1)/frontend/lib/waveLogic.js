@@ -30,11 +30,16 @@ function windowEnd(windowStr) {
   return parseTime(end);
 }
 
+// Any MARTA variant (train or bus) counts as transit.
+const isMarta = (transport) => transport === "marta" || transport?.startsWith("marta");
+
 // Transport + origin → preferred wave tier (1-indexed)
 function preferredTier(origin, transport) {
-  if (transport === "marta") {
-    if (origin === "airport" || origin === "downtown") return 1;
-    if (origin === "midtown") return 1;
+  if (isMarta(transport)) {
+    // Rail reaches the early priority waves; bus is one tier back since it's slower.
+    const railEarly = transport === "marta-train";
+    if (origin === "airport" || origin === "downtown") return railEarly ? 1 : 2;
+    if (origin === "midtown") return railEarly ? 1 : 2;
     return 2;
   }
   if (transport === "rideshare") return 3;
@@ -45,7 +50,7 @@ function preferredTier(origin, transport) {
 }
 
 export function computeWave(origin, transport, earliestArrivalMin = 0, waveTable = null) {
-  const transitBonus = transport === "marta";
+  const transitBonus = isMarta(transport);
   const priority = transitBonus && (origin === "airport" || origin === "downtown");
 
   // Pick tier from origin+transport, clamp to table length

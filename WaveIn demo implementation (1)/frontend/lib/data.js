@@ -238,7 +238,8 @@ export const ORIGINS = [
 ];
 
 export const TRANSPORTS = [
-  { id: "marta", label: "🚇 MARTA (Recommended)" },
+  { id: "marta-train", label: "🚆 MARTA Train (Recommended)" },
+  { id: "marta-bus", label: "🚌 MARTA Bus" },
   { id: "driving", label: "🚗 Driving" },
   { id: "rideshare", label: "🚕 Rideshare (Uber/Lyft)" },
 ];

@@ -2,13 +2,19 @@
 import { useState, useEffect, useRef } from "react";
 import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
-import { generateChart } from "@/lib/waveLogic";
+import { generateChart, parseTime, formatTime } from "@/lib/waveLogic";
 import { deriveCounters } from "@/lib/logistics";
 import Reveal from "./Reveal";
 import ArrivalChart from "./ArrivalChart";
 
 const CATEGORIES = ["WC26", "Falcons", "Atlanta United", "SEC Championship", "Concert", "Dragon Con"];
 const CATEGORY_EMOJIS = { "WC26": "⚽", "Falcons": "🏈", "Atlanta United": "⚽", "SEC Championship": "🏈", "Concert": "🎤", "Dragon Con": "🐉" };
+
+// Zone options for the wave config dropdown. Labels match the names lib/logistics
+// uses for its zone→stadium distance lookup, so counters compute correctly.
+const ZONE_OPTIONS = ["Airport", "Downtown", "Midtown", "Buckhead", "Decatur", "Sandy Springs", "Perimeter", "Suburbs"];
+// Transport options — plain labels (deriveCounters matches /marta/i on these).
+const TRANSPORT_OPTIONS = ["MARTA Train", "MARTA Bus", "Driving", "Rideshare"];
 
 const serif = "var(--font-serif)";
 
@@ -49,26 +55,61 @@ function StadiumIcon({ stroke = "#E8B45A", size = 20 }) {
 }
 
 // ─── Create Event slide-over ──────────────────────────────────────────────────
-const BLANK_WAVE = (n) => ({ name: `Wave ${n}`, window: "", zones: "", transport: "", reward: "", fans: "" });
+const WAVE_DOT = ["#5BD6A0", "#E8B45A", "#D99A4E", "#E2685B"];
+const MAX_WAVES = 20;
+// Per-wave editable rows. Windows + fans are computed (even intervals / even
+// split), so only transport, zones, and reward are stored here.
+const BLANK_ROW = { transport: "MARTA Train", zones: "Downtown", reward: "" };
 
 function CreateEventPanel({ onSave, onClose }) {
   const [details, setDetails] = useState({ label: "", category: "WC26", emoji: "⚽", date: "", doorsOpen: "", kickoff: "", totalFans: "" });
-  const [waves, setWaves] = useState([BLANK_WAVE(1), BLANK_WAVE(2), BLANK_WAVE(3), BLANK_WAVE(4)]);
+  const [waveCount, setWaveCount] = useState(4);
+  const [rows, setRows] = useState(() => Array.from({ length: 4 }, () => ({ ...BLANK_ROW })));
   const [error, setError] = useState("");
 
   const setDetail = (k, v) => setDetails((d) => ({ ...d, [k]: v }));
-  const setWave = (i, k, v) => setWaves((ws) => ws.map((w, idx) => (idx === i ? { ...w, [k]: v } : w)));
-  // Renumber Wave names so they stay sequential after add/remove.
-  const renumber = (ws) => ws.map((w, i) => ({ ...w, name: `Wave ${i + 1}` }));
-  const addWave = () => setWaves((ws) => renumber([...ws, BLANK_WAVE(ws.length + 1)]));
-  const removeWave = (i) => setWaves((ws) => (ws.length <= 1 ? ws : renumber(ws.filter((_, idx) => idx !== i))));
+  const setRow = (i, k, v) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+
+  // Resize the rows array to match the chosen wave count, preserving entries.
+  const changeWaveCount = (n) => {
+    setWaveCount(n);
+    setRows((rs) => Array.from({ length: n }, (_, i) => rs[i] || { ...BLANK_ROW }));
+  };
+
+  // Build the full wave table: even time windows between doors-open and kickoff,
+  // and an even fan split. Returns [] if times/fans aren't ready yet.
+  const buildWaves = () => {
+    const fans = parseInt((details.totalFans || "").replace(/,/g, ""), 10) || 0;
+    if (!details.doorsOpen || !details.kickoff || !fans) return [];
+    const start = parseTime(details.doorsOpen);
+    const end = parseTime(details.kickoff);
+    if (end <= start) return [];
+    const step = (end - start) / waveCount;          // even interval per wave
+    const per = Math.round(fans / waveCount);         // even fan split
+    return rows.map((r, i) => {
+      const wStart = Math.round(start + i * step);
+      const wEnd = Math.round(start + (i + 1) * step);
+      return {
+        name: `Wave ${i + 1}`,
+        dot: WAVE_DOT[i % WAVE_DOT.length],
+        window: `${formatTime(wStart)} – ${formatTime(wEnd)}`,
+        zones: r.zones,
+        transport: r.transport,
+        reward: r.reward || "Standard entry",
+        fans: per.toLocaleString(),
+      };
+    });
+  };
+
+  const previewWaves = buildWaves();
 
   const handleSave = () => {
     if (!details.label || !details.date || !details.doorsOpen || !details.kickoff || !details.totalFans) {
       setError("Please fill in all event details."); return;
     }
-    if (waves.some((w) => !w.window || !w.zones || !w.fans)) {
-      setError("Each wave needs a window, zones, and a fan estimate."); return;
+    const waves = buildWaves();
+    if (!waves.length) {
+      setError("Check that kickoff is after doors-open and attendance is filled in."); return;
     }
     const fans = parseInt(details.totalFans.replace(/,/g, ""), 10) || 0;
     onSave({
@@ -133,25 +174,6 @@ function CreateEventPanel({ onSave, onClose }) {
     return `${m[3]}-${String(mo).padStart(2, "0")}-${String(Number(m[2])).padStart(2, "0")}`;
   };
 
-  // A wave window is stored as "4:30 – 5:15pm". Read/write each end as 24h "HH:MM"
-  // so it binds to an <input type="time">.
-  const windowPart = (windowStr, which) => {
-    const parts = (windowStr || "").split(" – ");
-    const raw = (which === "start" ? parts[0] : parts[1])?.trim();
-    if (!raw) return "";
-    // Start often omits am/pm — inherit it from the end.
-    if (which === "start" && !/am|pm/i.test(raw) && parts[1]) {
-      return time12to24(raw + (/pm/i.test(parts[1]) ? "pm" : "am"));
-    }
-    return time12to24(raw);
-  };
-  const setWindowPart = (i, which, hhmm) => {
-    const cur = waves[i].window || "";
-    const start24 = which === "start" ? hhmm : windowPart(cur, "start");
-    const end24 = which === "end" ? hhmm : windowPart(cur, "end");
-    setWave(i, "window", `${time24to12(start24)} – ${time24to12(end24)}`);
-  };
-
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", justifyContent: "flex-end", background: "rgba(0,0,0,.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: "min(620px,100vw)", height: "100vh", background: "linear-gradient(180deg,#141F36,#0D131F)", borderLeft: "1px solid rgba(255,255,255,.1)", overflowY: "auto", animation: "slideOver .3s cubic-bezier(.16,1,.3,1)" }}>
@@ -180,42 +202,57 @@ function CreateEventPanel({ onSave, onClose }) {
           </div>
 
           {/* Waves */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Configure waves ({waves.length})</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {waves.map((w, i) => (
-              <div key={i} style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)" }}>Wave {i + 1}</span>
-                  {waves.length > 1 && (
-                    <button onClick={() => removeWave(i)} title="Remove wave" style={{ background: "none", border: "none", color: "var(--muted-3)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 2 }}>✕</button>
-                  )}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
-                    <div>
-                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Window start</span>
-                      <input type="time" style={pickerField} value={windowPart(w.window, "start")} onChange={(e) => setWindowPart(i, "start", e.target.value)} />
-                    </div>
-                    <span style={{ color: "var(--muted-3)", paddingTop: 18 }}>–</span>
-                    <div>
-                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Window end</span>
-                      <input type="time" style={pickerField} value={windowPart(w.window, "end")} onChange={(e) => setWindowPart(i, "end", e.target.value)} />
-                    </div>
-                  </div>
-                  <input style={field} placeholder="Zones — Airport, Downtown" value={w.zones} onChange={(e) => setWave(i, "zones", e.target.value)} />
-                  <input style={field} placeholder="Transport — MARTA Priority" value={w.transport} onChange={(e) => setWave(i, "transport", e.target.value)} />
-                  <input style={field} placeholder="Reward — Free drink" value={w.reward} onChange={(e) => setWave(i, "reward", e.target.value)} />
-                  <input style={{ ...field, gridColumn: "1 / -1" }} placeholder="Fans — 5,200" value={w.fans} onChange={(e) => setWave(i, "fans", e.target.value)} />
-                </div>
-              </div>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase" }}>Configure waves</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "var(--muted-3)" }}>Number of waves</span>
+              <select style={{ ...field, width: "auto", padding: "8px 10px" }} value={waveCount} onChange={(e) => changeWaveCount(Number(e.target.value))}>
+                {Array.from({ length: MAX_WAVES }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n} style={{ color: "#000" }}>{n}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <button onClick={addWave} style={{ width: "100%", marginTop: 14, padding: 12, borderRadius: 11, cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "var(--gold)", background: "rgba(232,180,90,.08)", border: "1px dashed rgba(232,180,90,.4)" }}>
-            + Add wave
-          </button>
+          <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "var(--muted-4)", lineHeight: 1.5 }}>
+            Time windows and fan counts are split evenly between doors-open and kickoff. Set transport, zones, and a reward per wave.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {rows.map((r, i) => {
+              const pv = previewWaves[i];
+              return (
+                <div key={i} style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 700, color: "var(--gold)" }}>
+                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: WAVE_DOT[i % WAVE_DOT.length] }} />Wave {i + 1}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--muted-2)" }}>
+                      {pv ? <>{pv.window} · <strong style={{ color: "var(--text)" }}>{pv.fans}</strong> fans</> : <span style={{ color: "var(--muted-4)" }}>fill doors/kickoff/attendance</span>}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Transport</span>
+                      <select style={field} value={r.transport} onChange={(e) => setRow(i, "transport", e.target.value)}>
+                        {TRANSPORT_OPTIONS.map((t) => <option key={t} value={t} style={{ color: "#000" }}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Zones</span>
+                      <select style={field} value={r.zones} onChange={(e) => setRow(i, "zones", e.target.value)}>
+                        {ZONE_OPTIONS.map((z) => <option key={z} value={z} style={{ color: "#000" }}>{z}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <span style={{ ...lbl, fontSize: 9.5, marginBottom: 4 }}>Reward</span>
+                      <input style={field} placeholder="e.g. Free drink + Priority Gate" value={r.reward} onChange={(e) => setRow(i, "reward", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           {error && <div style={{ marginTop: 16, fontSize: 13, color: "var(--red)" }}>{error}</div>}
 

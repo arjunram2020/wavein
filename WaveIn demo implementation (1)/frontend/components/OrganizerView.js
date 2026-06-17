@@ -2,9 +2,13 @@
 import { useState, useMemo } from "react";
 import { EVENTS } from "@/lib/data";
 import { useCountUp, fmt } from "@/lib/useCountUp";
-import { buildChartFromSubmissions } from "@/lib/waveLogic";
+import { buildChartFromSubmissions, generateChart } from "@/lib/waveLogic";
+import { deriveCounters } from "@/lib/logistics";
 import Reveal from "./Reveal";
 import ArrivalChart from "./ArrivalChart";
+
+const CATEGORIES = ["WC26", "Falcons", "Atlanta United", "SEC Championship", "Concert", "Dragon Con"];
+const CATEGORY_EMOJIS = { "WC26": "⚽", "Falcons": "🏈", "Atlanta United": "⚽", "SEC Championship": "🏈", "Concert": "🎤", "Dragon Con": "🐉" };
 
 const serif = "var(--font-serif)";
 
@@ -44,9 +48,105 @@ function StadiumIcon({ stroke = "#E8B45A", size = 20 }) {
   );
 }
 
-export default function OrganizerView({ events = EVENTS, submissions = {} }) {
+// ─── Create Event slide-over ──────────────────────────────────────────────────
+const BLANK_WAVE = (n) => ({ name: `Wave ${n}`, window: "", zones: "", transport: "", reward: "", fans: "" });
+
+function CreateEventPanel({ onSave, onClose }) {
+  const [details, setDetails] = useState({ label: "", category: "WC26", emoji: "⚽", date: "", kickoff: "", totalFans: "" });
+  const [waves, setWaves] = useState([BLANK_WAVE(1), BLANK_WAVE(2), BLANK_WAVE(3), BLANK_WAVE(4)]);
+  const [error, setError] = useState("");
+
+  const setDetail = (k, v) => setDetails((d) => ({ ...d, [k]: v }));
+  const setWave = (i, k, v) => setWaves((ws) => ws.map((w, idx) => (idx === i ? { ...w, [k]: v } : w)));
+
+  const handleSave = () => {
+    if (!details.label || !details.date || !details.kickoff || !details.totalFans) {
+      setError("Please fill in all event details."); return;
+    }
+    if (waves.some((w) => !w.window || !w.zones || !w.fans)) {
+      setError("Each wave needs a window, zones, and a fan estimate."); return;
+    }
+    const fans = parseInt(details.totalFans.replace(/,/g, ""), 10) || 0;
+    onSave({
+      id: `custom-${Date.now()}`,
+      category: details.category,
+      emoji: details.emoji || CATEGORY_EMOJIS[details.category] || "📅",
+      label: details.label,
+      date: details.date,
+      kickoff: details.kickoff,
+      totalFans: fans.toLocaleString(),
+      // Counters derived from the wave table (fans × transport × zone distance).
+      counters: deriveCounters(waves),
+      waveTable: waves,
+      chart: generateChart(details.kickoff, fans),
+    });
+    onClose();
+  };
+
+  const field = {
+    width: "100%", padding: "11px 13px", borderRadius: 10, background: "rgba(255,255,255,.04)",
+    border: "1px solid rgba(255,255,255,.12)", color: "var(--text)", fontFamily: "inherit", fontSize: 13.5, outline: "none", boxSizing: "border-box",
+  };
+  const lbl = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: ".6px", color: "var(--muted-2)", textTransform: "uppercase", marginBottom: 6 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", justifyContent: "flex-end", background: "rgba(0,0,0,.6)", backdropFilter: "blur(4px)" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(620px,100vw)", height: "100vh", background: "linear-gradient(180deg,#141F36,#0D131F)", borderLeft: "1px solid rgba(255,255,255,.1)", overflowY: "auto", animation: "slideOver .3s cubic-bezier(.16,1,.3,1)" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#141F36", padding: "22px 28px 16px", borderBottom: "1px solid rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: "1.6px", color: "var(--gold)", textTransform: "uppercase" }}>New Event</div>
+            <h2 style={{ fontFamily: serif, fontWeight: 400, fontSize: 26, margin: "4px 0 0", color: "var(--text-bright)" }}>Create Event</h2>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted-2)", fontSize: 22, cursor: "pointer" }}>✕</button>
+        </div>
+
+        <div style={{ padding: "22px 28px 40px" }}>
+          {/* Details */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 22 }}>
+            <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Event name</label><input style={field} placeholder="e.g. Falcons vs Cowboys" value={details.label} onChange={(e) => setDetail("label", e.target.value)} /></div>
+            <div><label style={lbl}>Category</label>
+              <select style={field} value={details.category} onChange={(e) => { setDetail("category", e.target.value); setDetail("emoji", CATEGORY_EMOJIS[e.target.value] || "📅"); }}>
+                {CATEGORIES.map((c) => <option key={c} value={c} style={{ color: "#000" }}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={lbl}>Emoji</label><input style={field} placeholder="⚽" value={details.emoji} onChange={(e) => setDetail("emoji", e.target.value)} /></div>
+            <div><label style={lbl}>Date</label><input style={field} placeholder="Sep 13, 2026" value={details.date} onChange={(e) => setDetail("date", e.target.value)} /></div>
+            <div><label style={lbl}>Kickoff</label><input style={field} placeholder="7:00pm KO" value={details.kickoff} onChange={(e) => setDetail("kickoff", e.target.value)} /></div>
+            <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Attendance</label><input style={field} placeholder="72,000" value={details.totalFans} onChange={(e) => setDetail("totalFans", e.target.value)} /></div>
+          </div>
+
+          {/* Waves */}
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".8px", color: "var(--muted-2)", textTransform: "uppercase", marginBottom: 12 }}>Configure waves</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {waves.map((w, i) => (
+              <div key={i} style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)" }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--gold)", marginBottom: 10 }}>Wave {i + 1}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <input style={field} placeholder="Window — 4:30 – 5:15pm" value={w.window} onChange={(e) => setWave(i, "window", e.target.value)} />
+                  <input style={field} placeholder="Zones — Airport, Downtown" value={w.zones} onChange={(e) => setWave(i, "zones", e.target.value)} />
+                  <input style={field} placeholder="Transport — MARTA Priority" value={w.transport} onChange={(e) => setWave(i, "transport", e.target.value)} />
+                  <input style={field} placeholder="Reward — Free drink" value={w.reward} onChange={(e) => setWave(i, "reward", e.target.value)} />
+                  <input style={{ ...field, gridColumn: "1 / -1" }} placeholder="Fans — 5,200" value={w.fans} onChange={(e) => setWave(i, "fans", e.target.value)} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {error && <div style={{ marginTop: 16, fontSize: 13, color: "var(--red)" }}>{error}</div>}
+
+          <button onClick={handleSave} style={{ width: "100%", marginTop: 24, padding: 15, borderRadius: 13, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 700, color: "#1A1206", background: "linear-gradient(180deg,#F0C572,#E0A24A)", boxShadow: "0 12px 30px rgba(224,162,74,.3)" }}>
+            Create Event →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function OrganizerView({ events = EVENTS, submissions = {}, onCreateEvent }) {
   const [selectedId, setSelectedId] = useState(events[0]?.id);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const ev = events.find((e) => e.id === selectedId) || events[0];
   const { counters, waveTable } = ev;
@@ -68,6 +168,13 @@ export default function OrganizerView({ events = EVENTS, submissions = {} }) {
 
   return (
     <div style={{ position: "relative", zIndex: 1, maxWidth: 1340, margin: "0 auto", padding: "clamp(24px,3.5vw,44px) clamp(18px,3vw,40px) 80px" }}>
+      {showCreate && (
+        <CreateEventPanel
+          onSave={(newEv) => { onCreateEvent?.(newEv); setSelectedId(newEv.id); }}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
+
       {/* Header */}
       <Reveal style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 18, marginBottom: 30 }}>
         <div>
@@ -103,7 +210,7 @@ export default function OrganizerView({ events = EVENTS, submissions = {} }) {
               </div>
             )}
           </div>
-          <button style={{ padding: "11px 18px", borderRadius: 12, border: "1px solid rgba(232,180,90,.45)", background: "rgba(232,180,90,.1)", color: "var(--gold)", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ New Event</button>
+          <button onClick={() => setShowCreate(true)} style={{ padding: "11px 18px", borderRadius: 12, border: "1px solid rgba(232,180,90,.45)", background: "rgba(232,180,90,.1)", color: "var(--gold)", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ New Event</button>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", borderRadius: 12, background: "rgba(91,214,160,.12)", border: "1px solid rgba(91,214,160,.3)", color: "var(--green)", fontSize: 13, fontWeight: 700, letterSpacing: ".5px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 10px #5BD6A0", animation: "twinkle 1.6s ease-in-out infinite" }} />LIVE
           </span>
